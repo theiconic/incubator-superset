@@ -4,7 +4,6 @@ import { clearChildren, openUrlInNewTab } from './Util';
 
 const REPORT_SERVICE_BASE_URL = 'http://localhost:3000/';
 const REPORT_SERVICE_GENERATE_PATH = 'generate-report/best-sellers/v1/';
-const REPORT_SERVICE_VIEW_PATH = 'report/';
 
 const propTypes = {
   // Each object is { field1: value1, field2: value2 }
@@ -75,16 +74,14 @@ async function ReportGeneratorUIVis(element, props) {
       fetchOptions,
     );
     const responseContent = await response.json();
-
-    const reportUrl = `${REPORT_SERVICE_BASE_URL}${REPORT_SERVICE_VIEW_PATH}${responseContent.reportKey}`;
-    const openSucceeded = openUrlInNewTab(reportUrl);
+    const openSucceeded = openUrlInNewTab(responseContent.reportUrl);
 
     if (openSucceeded) {
       return;
     }
 
     const reportLink = document.createElement('a');
-    reportLink.href = reportUrl;
+    reportLink.href = responseContent.reportUrl;
     reportLink.innerText = 'Open Generated Report';
     reportLink.setAttribute('target', '_blank');
     element.appendChild(reportLink);
