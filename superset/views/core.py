@@ -17,10 +17,8 @@
 # pylint: disable=C,R,W
 import logging
 import re
-from contextlib import closing
-from datetime import datetime, timedelta
-from enum import Enum
-from typing import Any, cast, Dict, List, Optional, Union
+import time
+import traceback
 from urllib import parse
 
 import backoff
@@ -38,6 +36,7 @@ from flask import (
     request,
     Response,
     url_for,
+    session
 )
 from flask_appbuilder import expose
 from flask_appbuilder.models.sqla.interface import SQLAInterface
@@ -2789,7 +2788,7 @@ class Superset(BaseSupersetView):
     @expose("/welcome")
     def welcome(self):
         """Personalized welcome page"""
-        if not g.user or not g.user.get_id():
+        if not g.user or not g.user.get_id() or not session.get('_fresh'):
             return redirect(appbuilder.get_url_for_login)
 
         welcome_dashboard_id = (
@@ -2806,11 +2805,10 @@ class Superset(BaseSupersetView):
         }
 
         return self.render_template(
-            "superset/welcome.html",
-            entry="welcome",
-            bootstrap_data=json.dumps(
-                payload, default=utils.pessimistic_json_iso_dttm_ser
-            ),
+            'superset/welcome.html',
+            entry='welcome',
+            title='Superset',
+            bootstrap_data=json.dumps(payload, default=utils.json_iso_dttm_ser),
         )
 
     @has_access

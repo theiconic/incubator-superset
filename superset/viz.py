@@ -34,6 +34,7 @@ from functools import reduce
 from itertools import product
 from typing import Any, Dict, List, Optional, Set, Tuple, TYPE_CHECKING, Union
 
+from bs4 import BeautifulSoup
 import geohash
 import numpy as np
 import pandas as pd
@@ -45,6 +46,9 @@ from flask_babel import lazy_gettext as _
 from geopy.point import Point
 from markdown import markdown
 from pandas.tseries.frequencies import to_offset
+from past.builtins import basestring
+import polyline
+import simplejson as json
 
 from superset import app, cache, get_css_manifest_files
 from superset.constants import NULL_STRING
@@ -716,6 +720,211 @@ class PivotTableViz(BaseViz):
                 ).split(" "),
             ),
         )
+
+    def read(self,doc):
+        df_values = pd.DataFrame()
+        url_soup = BeautifulSoup(doc['html'],'lxml')
+        tables_html = url_soup.find_all("table")
+
+        # Parse each table
+        for n in range(0, len(tables_html)):
+
+            n_cols = 0
+            n_rows = 0
+
+            for row in tables_html[n].find_all("tr"):
+                col_tags = row.find_all(["td", "th"])
+                if len(col_tags) > 0:
+                    n_rows += 1
+                    if len(col_tags) > n_cols:
+                        n_cols = len(col_tags)
+
+            # Create dataframe
+            df = pd.DataFrame(index=range(0, n_rows), columns=range(0, n_cols))
+
+            # Create list to store rowspan values
+            skip_index = [0 for i in range(0, n_cols)]
+
+            # Start by iterating over each row in this table...
+            row_counter = 0
+        for row in tables_html[n].find_all("tr"):
+
+            # Skip row if it's blank
+            if len(row.find_all(["td", "th"])) == 0:
+                next
+
+            else:
+
+                # Get all cells containing data in this row
+                columns = row.find_all(["td", "th"])
+                col_dim = []
+                row_dim = []
+                col_dim_counter = -1
+                row_dim_counter = -1
+                col_counter = -1
+                this_skip_index = copy.deepcopy(skip_index)
+
+                for col in columns:
+
+                    # Determine cell dimensions
+                    colspan = col.get("colspan")
+                    if colspan is None:
+                        col_dim.append(1)
+                    else:
+                        col_dim.append(int(colspan))
+                    col_dim_counter += 1
+
+                    rowspan = col.get("rowspan")
+                    if rowspan is None:
+                        row_dim.append(1)
+                    else:
+                        row_dim.append(int(rowspan))
+                    row_dim_counter += 1
+
+                    # Adjust column counter
+                    if col_counter == -1:
+                        col_counter = 0
+                    else:
+                        col_counter = col_counter + col_dim[col_dim_counter - 1]
+
+                    while skip_index[col_counter] > 0:
+                        col_counter += 1
+
+                    # Get cell contents
+                    cell_data = col.get_text()
+
+                    # Insert data into cell
+                    df.iat[row_counter, col_counter] = cell_data
+
+                    # Record column skipping index
+                    if row_dim[row_dim_counter] > 1:
+                        this_skip_index[col_counter] = row_dim[row_dim_counter]
+
+            # Adjust row counter
+            row_counter += 1
+
+            # Adjust column skipping index
+            skip_index = [i - 1 if i > 0 else i for i in this_skip_index]
+
+        # Append dataframe to list of tables
+        df_values = df_values.append(df)
+        return (df_values)
+
+    def get_csv(self):
+            df = self.get_df()
+            df_dict = self.get_data(df)
+            logging.debug('A debug message!')
+            logging.info(df_dict)
+            df = self.read(df_dict)
+            return df.to_csv(index=False, header=False, **config.get('CSV_EXPORT'))
+
+
+class ReportGeneratorUI(BaseViz):
+    """A UI for THE ICONIC Report Generator"""
+
+    viz_type = 'report_generator_ui'
+    verbose_name = _('Report Generator')
+    credits = 'a <a href="https://github.com/theiconic/incubator-superset">THE ICONIC</a> original'
+    is_timeseries = False
+    enforce_numerical_metrics = False
+
+    def should_be_timeseries(self):
+        fd = self.form_data
+        # TODO handle datasource-type-specific code in datasource
+        conditions_met = (
+            (fd.get('granularity') and fd.get('granularity') != 'all') or
+            (fd.get('granularity_sqla') and fd.get('time_grain_sqla'))
+        )
+        if fd.get('include_time') and not conditions_met:
+            raise Exception(_(
+                'Pick a granularity in the Time section or '
+                "uncheck 'Include Time'"))
+        return fd.get('include_time')
+
+    def query_obj(self):
+        d = super(ReportGeneratorUI, self).query_obj()
+        fd = self.form_data
+
+        if fd.get('all_columns') and (fd.get('groupby') or fd.get('metrics')):
+            raise Exception(_(
+                'Choose either fields to [Group By] and [Metrics] or '
+                '[Columns], not both'))
+
+        sort_by = fd.get('timeseries_limit_metric')
+        if fd.get('all_columns'):
+            d['columns'] = fd.get('all_columns')
+            d['groupby'] = []
+            order_by_cols = fd.get('order_by_cols') or []
+            d['orderby'] = [json.loads(t) for t in order_by_cols]
+        elif sort_by:
+            sort_by_label = utils.get_metric_name(sort_by)
+            if sort_by_label not in utils.get_metric_names(d['metrics']):
+                d['metrics'] += [sort_by]
+            d['orderby'] = [(sort_by, not fd.get('order_desc', True))]
+
+        # Add all percent metrics that are not already in the list
+        if 'percent_metrics' in fd:
+            d['metrics'] = d['metrics'] + list(filter(
+                lambda m: m not in d['metrics'],
+                fd['percent_metrics'] or [],
+            ))
+
+        d['is_timeseries'] = self.should_be_timeseries()
+        return d
+
+    def get_data(self, df):
+        fd = self.form_data
+        if (
+            not self.should_be_timeseries() and
+            df is not None and
+            DTTM_ALIAS in df
+        ):
+            del df[DTTM_ALIAS]
+
+        # Sum up and compute percentages for all percent metrics
+        percent_metrics = fd.get('percent_metrics') or []
+        percent_metrics = [self.get_metric_label(m) for m in percent_metrics]
+
+        if len(percent_metrics):
+            percent_metrics = list(filter(lambda m: m in df, percent_metrics))
+            metric_sums = {
+                m: reduce(lambda a, b: a + b, df[m])
+                for m in percent_metrics
+            }
+            metric_percents = {
+                m: list(map(
+                    lambda a: None if metric_sums[m] == 0 else a / metric_sums[m], df[m]))
+                for m in percent_metrics
+            }
+            for m in percent_metrics:
+                m_name = '%' + m
+                df[m_name] = pd.Series(metric_percents[m], name=m_name)
+            # Remove metrics that are not in the main metrics list
+            metrics = fd.get('metrics') or []
+            metrics = [self.get_metric_label(m) for m in metrics]
+            for m in filter(
+                lambda m: m not in metrics and m in df.columns,
+                percent_metrics,
+            ):
+                del df[m]
+
+        data = self.handle_js_int_overflow(
+            dict(
+                records=df.to_dict(orient='records'),
+                columns=list(df.columns),
+            ))
+        return data
+
+    def json_dumps(self, obj, sort_keys=False):
+        if self.form_data.get('all_columns'):
+            return json.dumps(
+                obj,
+                default=utils.json_iso_dttm_ser,
+                sort_keys=sort_keys,
+                ignore_nan=True)
+        else:
+            return super(ReportGeneratorUI, self).json_dumps(obj)
+
 
 
 class MarkupViz(BaseViz):

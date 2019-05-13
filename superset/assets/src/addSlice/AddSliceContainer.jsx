@@ -78,6 +78,20 @@ export default class AddSliceContainer extends React.PureComponent {
   }
 
   render() {
+    /* check later
+    version 0.29
+    const types = getChartMetadataRegistry().entries()
+      .map(({ key, value }) => ({
+        value: key,
+        label: value.name,
+      }));
+
+    // Added by chris patch new item into types such that we don't need to modify @superset-ui/chart
+    types.push({
+      label: 'Report Generator UI',
+      value: 'report_generator_ui',
+    }); */
+
     return (
       <div className="container">
         <Panel header={<h3>{t('Create a new chart')}</h3>}>
