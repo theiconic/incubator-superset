@@ -701,7 +701,7 @@ class PivotTableViz(BaseViz):
 
 class ReportGeneratorUI(BaseViz):
 
-    
+
     """A UI for THE ICONIC Report Generator"""
 
     viz_type = 'report_generator_ui'
@@ -724,7 +724,6 @@ class ReportGeneratorUI(BaseViz):
         return fd.get('include_time')
 
     def query_obj(self):
-        print("start query_obj")
         d = super(ReportGeneratorUI, self).query_obj()
         fd = self.form_data
 
@@ -753,12 +752,9 @@ class ReportGeneratorUI(BaseViz):
             ))
 
         d['is_timeseries'] = self.should_be_timeseries()
-        print("end query_obj")
-        print(d)
         return d
 
     def get_data(self, df):
-        print("start get_data")
         fd = self.form_data
         if (
             not self.should_be_timeseries() and
@@ -794,28 +790,21 @@ class ReportGeneratorUI(BaseViz):
             ):
                 del df[m]
 
-        print("mid get_data")
         data = self.handle_js_int_overflow(
             dict(
                 records=df.to_dict(orient='records'),
                 columns=list(df.columns),
             ))
-        # print(data)
-        print("end get_data")
         return data
 
     def json_dumps(self, obj, sort_keys=False):
-        print("start json_dumps")
-        print(self.form_data)
         if self.form_data.get('all_columns'):
-            print("if json_dumps")
             return json.dumps(
                 obj,
                 default=utils.json_iso_dttm_ser,
                 sort_keys=sort_keys,
                 ignore_nan=True)
         else:
-            print("else json_dumps")
             return super(ReportGeneratorUI, self).json_dumps(obj)
 
 
