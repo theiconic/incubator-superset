@@ -2,7 +2,7 @@ import PropTypes from 'prop-types';
 import './ReportGeneratorUI.css';
 import { clearChildren, openUrlInNewTab } from './Util';
 
-const REPORT_SERVICE_BASE_URL = 'http://localhost:3000/';
+const REPORT_SERVICE_BASE_URL = 'http://report-generator.civic.snag.eks.aws.theiconic.com.au/';
 const REPORT_SERVICE_GENERATE_PATH = 'generate-report/best-sellers/v1/';
 
 const propTypes = {
@@ -42,6 +42,7 @@ const propTypes = {
 };
 
 async function ReportGeneratorUIVis(element, props) {
+  console.log(props);
   const {
     data,
     // columns,
