@@ -1,11 +1,5 @@
-# -*- coding: utf-8 -*-
 # pylint: disable=C,R,W
 """A set of constants and methods to manage permissions and security"""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import logging
 
 from flask import g
@@ -15,11 +9,20 @@ from sqlalchemy import or_
 
 from superset import sql_parse
 from superset.connectors.connector_registry import ConnectorRegistry
+from superset.exceptions import SupersetSecurityException
 
 READ_ONLY_MODEL_VIEWS = {
     'DatabaseAsync',
     'DatabaseView',
     'DruidClusterModelView',
+}
+
+USER_MODEL_VIEWS = {
+    'UserDBModelView',
+    'UserLDAPModelView',
+    'UserOAuthModelView',
+    'UserOIDModelView',
+    'UserRemoteUserModelView',
 }
 
 GAMMA_READ_ONLY_MODEL_VIEWS = {
@@ -40,12 +43,7 @@ ADMIN_ONLY_VIEW_MENUS = {
     'ResetPasswordView',
     'RoleModelView',
     'Security',
-    'UserDBModelView',
-    'UserLDAPModelView',
-    'UserOAuthModelView',
-    'UserOIDModelView',
-    'UserRemoteUserModelView',
-}
+} | USER_MODEL_VIEWS
 
 ALPHA_ONLY_VIEW_MENUS = {
     'Upload a CSV',
@@ -89,7 +87,7 @@ class SupersetSecurityManager(SecurityManager):
         """Protecting from has_access failing from missing perms/view"""
         if not user:
             user = g.user
-        if user.is_anonymous():
+        if user.is_anonymous:
             return self.is_item_public(permission_name, view_name)
         return self._has_view_access(user, permission_name, view_name)
 
@@ -380,7 +378,7 @@ class SupersetSecurityManager(SecurityManager):
                 'can_sql_json', 'can_csv', 'can_search_queries', 'can_sqllab_viz',
                 'can_sqllab',
             } or
-            (pvm.view_menu.name == 'UserDBModelView' and
+            (pvm.view_menu.name in USER_MODEL_VIEWS and
              pvm.permission.name == 'can_list'))
 
     def is_granter_pvm(self, pvm):
@@ -430,4 +428,11 @@ class SupersetSecurityManager(SecurityManager):
                     permission_id=permission.id,
                     view_menu_id=view_menu.id,
                 ),
+            )
+
+    def assert_datasource_permission(self, datasource, user=None):
+        if not self.datasource_access(datasource, user):
+            raise SupersetSecurityException(
+                self.get_datasource_access_error_msg(datasource),
+                self.get_datasource_access_link(datasource),
             )
