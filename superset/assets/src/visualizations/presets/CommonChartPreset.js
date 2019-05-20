@@ -12,6 +12,7 @@ import LineChartPlugin from '../nvd3/Line/LineChartPlugin';
 import PieChartPlugin from '../nvd3/Pie/PieChartPlugin';
 import PivotTableChartPlugin from '../PivotTable/PivotTableChartPlugin';
 import TableChartPlugin from '../Table/TableChartPlugin';
+import ReportGeneratorUIChartPlugin from '../ReportGeneratorUI/ReportGeneratorUIChartPlugin';
 import TimeTableChartPlugin from '../TimeTable/TimeTableChartPlugin';
 import WordCloudChartPlugin from '../wordcloud/WordCloudChartPlugin';
 
@@ -33,6 +34,7 @@ export default class CommonChartPreset extends Preset {
         new PieChartPlugin().configure({ key: 'pie' }),
         new PivotTableChartPlugin().configure({ key: 'pivot_table' }),
         new TableChartPlugin().configure({ key: 'table' }),
+        new ReportGeneratorUIChartPlugin().configure({ key: 'report_generator_ui' }),
         new TimeTableChartPlugin().configure({ key: 'time_table' }),
         new WordCloudChartPlugin().configure({ key: 'word_cloud' }),
       ],
