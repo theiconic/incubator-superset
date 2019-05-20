@@ -61,6 +61,11 @@ export default class AddSliceContainer extends React.PureComponent {
         value: key,
         label: value.name,
       }));
+    // patch new item into types such that we don't need to modify @superset-ui/chart
+    types.push({
+      label: 'Report Generator UI',
+      value: 'report_generator_ui',
+    });
 
     return (
       <div className="container">
