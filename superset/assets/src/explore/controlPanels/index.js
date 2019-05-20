@@ -39,7 +39,6 @@ import Sankey from './Sankey';
 import Sunburst from './Sunburst';
 import Separator from './Separator';
 import Table from './Table';
-import ReportGeneratorUI from './ReportGeneratorUI';
 import TimePivot from './TimePivot';
 import TimeTable from './TimeTable';
 import Treemap from './Treemap';
@@ -90,7 +89,6 @@ export const controlPanelConfigs = {
   separator: Separator,
   sunburst: Sunburst,
   table: Table,
-  report_generator_ui: ReportGeneratorUI,
   time_pivot: TimePivot,
   time_table: TimeTable,
   treemap: Treemap,
