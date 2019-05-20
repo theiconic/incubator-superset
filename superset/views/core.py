@@ -6,6 +6,7 @@ import os
 import re
 import time
 import traceback
+from flask import session
 from urllib import parse
 
 from flask import (
@@ -2746,7 +2747,7 @@ class Superset(BaseSupersetView):
     @expose('/welcome')
     def welcome(self):
         """Personalized welcome page"""
-        if not g.user or not g.user.get_id():
+        if not g.user or not g.user.get_id() or not session.get('_fresh'):
             return redirect(appbuilder.get_url_for_login)
 
         welcome_dashboard_id = (
@@ -2764,7 +2765,7 @@ class Superset(BaseSupersetView):
         }
 
         return self.render_template(
-            'superset/basic.html',
+            'superset/welcome.html',
             entry='welcome',
             title='Superset',
             bootstrap_data=json.dumps(payload, default=utils.json_iso_dttm_ser),
