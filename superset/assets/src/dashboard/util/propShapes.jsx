@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 import PropTypes from 'prop-types';
 import componentTypes from './componentTypes';
 import backgroundStyleOptions from './backgroundStyleOptions';
@@ -48,13 +66,29 @@ export const slicePropShape = PropTypes.shape({
   description_markeddown: PropTypes.string,
 });
 
+export const filterIndicatorPropShape = PropTypes.shape({
+  chartId: PropTypes.number.isRequired,
+  colorCode: PropTypes.string.isRequired,
+  componentId: PropTypes.string.isRequired,
+  directPathToFilter: PropTypes.arrayOf(PropTypes.string).isRequired,
+  isDateFilter: PropTypes.bool.isRequired,
+  isFilterFieldActive: PropTypes.bool.isRequired,
+  isInstantFilter: PropTypes.bool.isRequired,
+  label: PropTypes.string.isRequired,
+  name: PropTypes.string.isRequired,
+  scope: PropTypes.string.isRequired,
+  values: PropTypes.array.isRequired,
+});
+
 export const dashboardStatePropShape = PropTypes.shape({
   sliceIds: PropTypes.arrayOf(PropTypes.number).isRequired,
-  refresh: PropTypes.bool.isRequired,
-  filters: PropTypes.object.isRequired,
   expandedSlices: PropTypes.object,
   editMode: PropTypes.bool,
-  showBuilderPane: PropTypes.bool,
+  isPublished: PropTypes.bool.isRequired,
+  builderPaneType: PropTypes.string.isRequired,
+  colorNamespace: PropTypes.string,
+  colorScheme: PropTypes.string,
+  updatedColorScheme: PropTypes.bool,
   hasUnsavedChanges: PropTypes.bool,
 });
 

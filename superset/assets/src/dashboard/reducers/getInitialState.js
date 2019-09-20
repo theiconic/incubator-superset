@@ -1,15 +1,34 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 /* eslint-disable camelcase */
+import { isString } from 'lodash';
 import shortid from 'shortid';
 import { CategoricalColorNamespace } from '@superset-ui/color';
 
 import { chart } from '../../chart/chartReducer';
+import { dashboardFilter } from './dashboardFilters';
 import { initSliceEntities } from './sliceEntities';
 import { getParam } from '../../modules/utils';
 import { applyDefaultFormData } from '../../explore/store';
-import findFirstParentContainerId from '../util/findFirstParentContainer';
-import getEmptyLayout from '../util/getEmptyLayout';
-import newComponentFactory from '../util/newComponentFactory';
+import { buildActiveFilters } from '../util/activeDashboardFilters';
 import {
+  BUILDER_PANE_TYPE,
   DASHBOARD_HEADER_ID,
   GRID_DEFAULT_CHART_WIDTH,
   GRID_COLUMN_COUNT,
@@ -19,15 +38,22 @@ import {
   CHART_TYPE,
   ROW_TYPE,
 } from '../util/componentTypes';
+import { buildFilterColorMap } from '../util/dashboardFiltersColorMap';
+import findFirstParentContainerId from '../util/findFirstParentContainer';
+import getEmptyLayout from '../util/getEmptyLayout';
+import getFilterConfigsFromFormdata from '../util/getFilterConfigsFromFormdata';
+import getLocationHash from '../util/getLocationHash';
+import newComponentFactory from '../util/newComponentFactory';
+import { TIME_RANGE } from '../../visualizations/FilterBox/FilterBox';
 
 export default function(bootstrapData) {
   const { user_id, datasources, common, editMode } = bootstrapData;
 
   const dashboard = { ...bootstrapData.dashboard_data };
-  let filters = {};
+  let preselectFilters = {};
   try {
     // allow request parameter overwrite dashboard metadata
-    filters = JSON.parse(
+    preselectFilters = JSON.parse(
       getParam('preselect_filters') || dashboard.metadata.default_filters,
     );
   } catch (e) {
@@ -37,15 +63,26 @@ export default function(bootstrapData) {
   // Priming the color palette with user's label-color mapping provided in
   // the dashboard's JSON metadata
   if (dashboard.metadata && dashboard.metadata.label_colors) {
-    const colorMap = dashboard.metadata.label_colors;
+    const scheme = dashboard.metadata.color_scheme;
+    const namespace = dashboard.metadata.color_namespace;
+    const colorMap = isString(dashboard.metadata.label_colors)
+      ? JSON.parse(dashboard.metadata.label_colors)
+      : dashboard.metadata.label_colors;
     Object.keys(colorMap).forEach(label => {
-      CategoricalColorNamespace.getScale().setColor(label, colorMap[label]);
+      CategoricalColorNamespace.getScale(scheme, namespace).setColor(
+        label,
+        colorMap[label],
+      );
     });
   }
 
   // dashboard layout
   const { position_json: positionJson } = dashboard;
-  const layout = positionJson || getEmptyLayout();
+  // new dash: positionJson could be {} or null
+  const layout =
+    positionJson && Object.keys(positionJson).length > 0
+      ? positionJson
+      : getEmptyLayout();
 
   // create a lookup to sync layout names with slice names
   const chartIdToLayoutId = {};
@@ -62,6 +99,7 @@ export default function(bootstrapData) {
   let newSlicesContainerWidth = 0;
 
   const chartQueries = {};
+  const dashboardFilters = {};
   const slices = {};
   const sliceIds = new Set();
   dashboard.slices.forEach(slice => {
@@ -96,21 +134,61 @@ export default function(bootstrapData) {
           newSlicesContainerWidth === 0 ||
           newSlicesContainerWidth + GRID_DEFAULT_CHART_WIDTH > GRID_COLUMN_COUNT
         ) {
-          newSlicesContainer = newComponentFactory(ROW_TYPE);
+          newSlicesContainer = newComponentFactory(
+            ROW_TYPE,
+            (parent.parents || []).slice(),
+          );
           layout[newSlicesContainer.id] = newSlicesContainer;
           parent.children.push(newSlicesContainer.id);
           newSlicesContainerWidth = 0;
         }
 
-        const chartHolder = newComponentFactory(CHART_TYPE, {
-          chartId: slice.slice_id,
-        });
+        const chartHolder = newComponentFactory(
+          CHART_TYPE,
+          {
+            chartId: slice.slice_id,
+          },
+          (newSlicesContainer.parents || []).slice(),
+        );
 
         layout[chartHolder.id] = chartHolder;
         newSlicesContainer.children.push(chartHolder.id);
         chartIdToLayoutId[chartHolder.meta.chartId] = chartHolder.id;
         newSlicesContainerWidth += GRID_DEFAULT_CHART_WIDTH;
       }
+
+      // build DashboardFilters for interactive filter features
+      if (slice.form_data.viz_type === 'filter_box') {
+        const configs = getFilterConfigsFromFormdata(slice.form_data);
+        let columns = configs.columns;
+        const labels = configs.labels;
+        if (preselectFilters[key]) {
+          Object.keys(columns).forEach(col => {
+            if (preselectFilters[key][col]) {
+              columns = {
+                ...columns,
+                [col]: preselectFilters[key][col],
+              };
+            }
+          });
+        }
+
+        const componentId = chartIdToLayoutId[key];
+        const directPathToFilter = (layout[componentId].parents || []).slice();
+        directPathToFilter.push(componentId);
+        dashboardFilters[key] = {
+          ...dashboardFilter,
+          chartId: key,
+          componentId,
+          directPathToFilter,
+          columns,
+          labels,
+          isInstantFilter: !!slice.form_data.instant_filtering,
+          isDateFilter: Object.keys(columns).includes(TIME_RANGE),
+        };
+      }
+      buildActiveFilters(dashboardFilters);
+      buildFilterColorMap(dashboardFilters);
     }
 
     // sync layout names with current slice names in case a slice was edited
@@ -137,6 +215,14 @@ export default function(bootstrapData) {
     future: [],
   };
 
+  // find direct link component and path from root
+  const directLinkComponentId = getLocationHash();
+  let directPathToChild = [];
+  if (layout[directLinkComponentId]) {
+    directPathToChild = (layout[directLinkComponentId].parents || []).slice();
+    directPathToChild.push(directLinkComponentId);
+  }
+
   return {
     datasources,
     sliceEntities: { ...initSliceEntities, slices, isLoading: false },
@@ -146,9 +232,9 @@ export default function(bootstrapData) {
       id: dashboard.id,
       slug: dashboard.slug,
       metadata: {
-        filter_immune_slice_fields:
-          dashboard.metadata.filter_immune_slice_fields,
-        filter_immune_slices: dashboard.metadata.filter_immune_slices,
+        filterImmuneSliceFields:
+          dashboard.metadata.filter_immune_slice_fields || {},
+        filterImmuneSlices: dashboard.metadata.filter_immune_slices || [],
         timed_refresh_immune_slices:
           dashboard.metadata.timed_refresh_immune_slices,
       },
@@ -156,20 +242,35 @@ export default function(bootstrapData) {
       dash_edit_perm: dashboard.dash_edit_perm,
       dash_save_perm: dashboard.dash_save_perm,
       superset_can_explore: dashboard.superset_can_explore,
+      superset_can_csv: dashboard.superset_can_csv,
       slice_can_edit: dashboard.slice_can_edit,
       common: {
         flash_messages: common.flash_messages,
         conf: common.conf,
       },
     },
+    dashboardFilters,
     dashboardState: {
       sliceIds: Array.from(sliceIds),
-      refresh: false,
-      filters,
+      directPathToChild,
+      directPathLastUpdated: Date.now(),
+      // dashboard only has 1 focused filter field at a time,
+      // but when user switch different filter boxes,
+      // browser didn't always fire onBlur and onFocus events in order.
+      // so in redux state focusedFilterField prop is a queue,
+      // but component use focusedFilterField prop as single object.
+      focusedFilterField: [],
       expandedSlices: dashboard.metadata.expanded_slices || {},
+      refreshFrequency: dashboard.metadata.refresh_frequency || 0,
       css: dashboard.css || '',
+      colorNamespace: dashboard.metadata.color_namespace,
+      colorScheme: dashboard.metadata.color_scheme,
       editMode: dashboard.dash_edit_perm && editMode,
-      showBuilderPane: dashboard.dash_edit_perm && editMode,
+      isPublished: dashboard.published,
+      builderPaneType:
+        dashboard.dash_edit_perm && editMode
+          ? BUILDER_PANE_TYPE.ADD_COMPONENTS
+          : BUILDER_PANE_TYPE.NONE,
       hasUnsavedChanges: false,
       maxUndoHistoryExceeded: false,
     },

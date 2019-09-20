@@ -1,3 +1,20 @@
+..  Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+..    http://www.apache.org/licenses/LICENSE-2.0
+
+..  Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
 SQL Lab
 =======
 
@@ -19,7 +36,7 @@ Feature Overview
 - Browse database metadata: tables, columns, indexes, partitions
 - Support for long-running queries
 
-  - uses the `Celery distributed queue <http://www.python.org/>`_
+  - uses the `Celery distributed queue <http://www.celeryproject.org/>`_
     to dispatch query handling to workers
   - supports defining a "results backend" to persist query results
 
@@ -39,7 +56,7 @@ Templating with Jinja
 
     SELECT *
     FROM some_table
-    WHERE partition_key = '{{ presto.latest_partition('some_table') }}'
+    WHERE partition_key = '{{ presto.first_latest_partition('some_table') }}'
 
 Templating unleashes the power and capabilities of a
 programming language within your SQL code.
@@ -62,12 +79,21 @@ Superset's Jinja context:
 
 `Jinja's builtin filters <http://jinja.pocoo.org/docs/dev/templates/>`_ can be also be applied where needed.
 
-.. autoclass:: superset.jinja_context.PrestoTemplateProcessor
-    :members:
+.. autofunction:: superset.jinja_context.current_user_id
+
+.. autofunction:: superset.jinja_context.current_username
 
 .. autofunction:: superset.jinja_context.url_param
 
 .. autofunction:: superset.jinja_context.filter_values
+
+.. autofunction:: superset.jinja_context.CacheKeyWrapper.cache_key_wrapper
+
+.. autoclass:: superset.jinja_context.PrestoTemplateProcessor
+    :members:
+
+.. autoclass:: superset.jinja_context.HiveTemplateProcessor
+    :members:
 
 Extending macros
 ''''''''''''''''
@@ -77,3 +103,22 @@ it's possible for administrators to expose more more macros in their
 environment using the configuration variable ``JINJA_CONTEXT_ADDONS``.
 All objects referenced in this dictionary will become available for users
 to integrate in their queries in **SQL Lab**.
+
+Query cost estimation
+'''''''''''''''''''''
+
+Some databases support ``EXPLAIN`` queries that allow users to estimate the cost
+of queries before executing this. Currently, Presto is supported in SQL Lab. To
+enable query cost estimation, add the following keys to the "Extra" field in the
+database configuration:
+
+.. code-block:: json
+
+    {
+        "version": "0.319",
+        "cost_estimate_enabled": true,
+        ...
+    }
+
+Here, "version" should be the version of your Presto cluster. Support for this
+functionality was introduced in Presto 0.319.
