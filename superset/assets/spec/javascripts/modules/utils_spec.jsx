@@ -39,7 +39,6 @@ describe('utils', () => {
     });
   });
 
-<<<<<<< HEAD
   describe('d3format', () => {
     it('returns a string formatted number as specified', () => {
       expect(d3format('.3s', 1234)).toBe('1.23k');

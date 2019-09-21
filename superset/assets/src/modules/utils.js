@@ -18,7 +18,6 @@
  */
 /* eslint camelcase: 0 */
 import $ from 'jquery';
-<<<<<<< HEAD
 import { format as d3Format } from 'd3-format';
 import { d3Select } from 'd3-selection';
 import { timeFormat as d3TimeFormat } from 'd3-time-format';
