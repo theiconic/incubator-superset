@@ -53,6 +53,7 @@ import { DeckGLChartPreset } from '@superset-ui/legacy-preset-chart-deckgl';
 
 import FilterBoxChartPlugin from '../FilterBox/FilterBoxChartPlugin';
 import TimeTableChartPlugin from '../TimeTable/TimeTableChartPlugin';
+import ReportGeneratorUIChartPlugin from '../ReportGeneratorUI/ReportGeneratorUIChartPlugin';
 
 export default class MainPreset extends Preset {
   constructor() {
@@ -93,6 +94,7 @@ export default class MainPreset extends Preset {
         new PieChartPlugin().configure({ key: 'pie' }),
         new PivotTableChartPlugin().configure({ key: 'pivot_table' }),
         new RoseChartPlugin().configure({ key: 'rose' }),
+        new ReportGeneratorUIChartPlugin().configure({ key: 'report_generator_ui' }),
         new SankeyChartPlugin().configure({ key: 'sankey' }),
         new SunburstChartPlugin().configure({ key: 'sunburst' }),
         new TableChartPlugin().configure({ key: 'table' }),
