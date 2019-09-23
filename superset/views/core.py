@@ -21,6 +21,7 @@ import logging
 import re
 from typing import Dict, List, Optional, Union  # noqa: F401
 from urllib import parse
+from flask import session
 
 import backoff
 from flask import (
