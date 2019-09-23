@@ -17,7 +17,7 @@ export default class TableChartPlugin extends ChartPlugin {
     super({
       metadata,
       transformProps,
-      loadChart: () => import('./ReactReportGeneratorUI.js'),
+      loadChart: () => import('./ReportGeneratorUI.jsx'),
     });
   }
 }
