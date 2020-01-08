@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+{% set locale = session['locale'] %}
+{% if not locale %}
+{% set locale = 'en' %}
+{% endif %}
+
+<!--/static/assets/dist/-->
+
+{% if not current_user.is_anonymous %}
+
+<li>
+    <a href="/superset/welcome" style="font-weight: 700; font-size: 16px;font-style: italic;">
+        <i class="fa fa-fw fa-home"></i> Home
+    </a>
+</li>
+<li>
+    <a href="/superset/dashboard/usage_guide/">
+        <i class="fa fa-fw fa-book"></i> Usage Guide
+    </a>
+</li>
+<li>
+    <a href="/superset/profile/{{ current_user.username }}/">
+        <i class="fa fa-fw fa-star"></i> Favourites
+    </a>
+</li>
+<li>
+    <a href="/logout">
+        <i class="fa fa-fw fa-sign-out"></i> Log Out
+    </a>
+</li>
+
+{% else %}
+<li><a href="{{appbuilder.get_url_for_login}}">
+    <i class="fa fa-fw fa-sign-in"></i>{{_("Login")}}</a></li>
+{% endif %}

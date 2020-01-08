@@ -1,0 +1,19 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ${APP_NAME}
+  annotations:
+    kubernetes.io/ingress.class: internal-nginx
+    kubernetes.io/tls-acme: "true"
+spec:
+  tls:
+  - hosts:
+    - ${SERVICE_URL}
+    secretName: ${APP_NAME}-certificate
+  rules:
+  - host: ${SERVICE_URL}
+    http:
+      paths:
+      - backend:
+          serviceName: ${APP_NAME}
+          servicePort: 443

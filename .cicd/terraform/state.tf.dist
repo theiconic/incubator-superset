@@ -1,0 +1,22 @@
+terraform {
+  backend "s3" {
+    bucket = "${CICD_TERRAFORM_BUCKET}"
+    key = "terraform/${CICD_NAMESPACE}/${APP_NAME}/terraform.tfstate"
+    region = "${CICD_REGION}"
+  }
+}
+
+provider "aws" {
+  region = "${CICD_REGION}"
+  access_key = "${var.aws_access_key_id}"
+  secret_key = "${var.aws_secret_access_key}"
+}
+
+data "terraform_remote_state" "cluster" {
+  backend = "s3"
+  config {
+    bucket = "${CICD_TERRAFORM_BUCKET}",
+    key = "terraform/terraform.tfstate",
+    region = "${CICD_REGION}"
+  }
+}
