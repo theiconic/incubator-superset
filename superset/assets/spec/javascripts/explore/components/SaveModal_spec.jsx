@@ -1,6 +1,25 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 import React from 'react';
 import configureStore from 'redux-mock-store';
 import thunk from 'redux-thunk';
+import { bindActionCreators } from 'redux';
 
 import { shallow, mount } from 'enzyme';
 import { Modal, Button, Radio } from 'react-bootstrap';
@@ -34,7 +53,12 @@ describe('SaveModal', () => {
 
   const defaultProps = {
     onHide: () => ({}),
-    actions: saveModalActions,
+    actions: bindActionCreators(saveModalActions, arg => {
+      if (typeof arg === 'function') {
+        return arg(jest.fn);
+      }
+      return arg;
+    }),
     form_data: { datasource: '107__table' },
   };
   const mockEvent = {
@@ -90,15 +114,15 @@ describe('SaveModal', () => {
 
   it('componentDidMount', () => {
     sinon.spy(SaveModal.prototype, 'componentDidMount');
-    sinon.spy(saveModalActions, 'fetchDashboards');
+    sinon.spy(defaultProps.actions, 'fetchDashboards');
     mount(<SaveModal {...defaultProps} />, {
       context: { store },
     });
     expect(SaveModal.prototype.componentDidMount.calledOnce).toBe(true);
-    expect(saveModalActions.fetchDashboards.calledOnce).toBe(true);
+    expect(defaultProps.actions.fetchDashboards.calledOnce).toBe(true);
 
     SaveModal.prototype.componentDidMount.restore();
-    saveModalActions.fetchDashboards.restore();
+    defaultProps.actions.fetchDashboards.restore();
   });
 
   it('onChange', () => {
@@ -120,22 +144,25 @@ describe('SaveModal', () => {
         .stub(exploreUtils, 'getExploreUrlAndPayload')
         .callsFake(() => ({ url: 'mockURL', payload: defaultProps.form_data }));
 
-      sinon
-        .stub(saveModalActions, 'saveSlice')
-        .callsFake(() =>
-          Promise.resolve({ data: { dashboard: '/mock/', slice: { slice_url: '/mock/' } } }),
-        );
+      sinon.stub(defaultProps.actions, 'saveSlice').callsFake(() =>
+        Promise.resolve({
+          data: {
+            dashboard: '/mock_dashboard/',
+            slice: { slice_url: '/mock_slice/' },
+          },
+        }),
+      );
     });
 
     afterEach(() => {
       exploreUtils.getExploreUrlAndPayload.restore();
-      saveModalActions.saveSlice.restore();
+      defaultProps.actions.saveSlice.restore();
     });
 
     it('should save slice', () => {
       const wrapper = getWrapper();
       wrapper.instance().saveOrOverwrite(true);
-      const args = saveModalActions.saveSlice.getCall(0).args;
+      const args = defaultProps.actions.saveSlice.getCall(0).args;
       expect(args[0]).toEqual(defaultProps.form_data);
     });
 
@@ -149,7 +176,7 @@ describe('SaveModal', () => {
 
       wrapper.setState({ saveToDashboardId });
       wrapper.instance().saveOrOverwrite(true);
-      const args = saveModalActions.saveSlice.getCall(0).args;
+      const args = defaultProps.actions.saveSlice.getCall(0).args;
       expect(args[1].save_to_dashboard_id).toBe(saveToDashboardId);
     });
 
@@ -163,8 +190,54 @@ describe('SaveModal', () => {
 
       wrapper.setState({ newDashboardName });
       wrapper.instance().saveOrOverwrite(true);
-      const args = saveModalActions.saveSlice.getCall(0).args;
+      const args = defaultProps.actions.saveSlice.getCall(0).args;
       expect(args[1].new_dashboard_name).toBe(newDashboardName);
+    });
+
+    describe('should always reload or redirect', () => {
+      let wrapper;
+      beforeEach(() => {
+        wrapper = getWrapper();
+        sinon.stub(window.location, 'assign');
+      });
+      afterEach(() => {
+        window.location.assign.restore();
+      });
+
+      it('Save & go to dashboard', done => {
+        wrapper.instance().saveOrOverwrite(true);
+        defaultProps.actions.saveSlice().then(() => {
+          expect(window.location.assign.callCount).toEqual(1);
+          expect(window.location.assign.getCall(0).args[0]).toEqual(
+            'http://localhost/mock_dashboard/',
+          );
+          done();
+        });
+      });
+
+      it('saveas new slice', done => {
+        wrapper.setState({ action: 'saveas', newSliceName: 'new slice name' });
+        wrapper.instance().saveOrOverwrite(false);
+        defaultProps.actions.saveSlice().then(() => {
+          expect(window.location.assign.callCount).toEqual(1);
+          expect(window.location.assign.getCall(0).args[0]).toEqual(
+            '/mock_slice/',
+          );
+          done();
+        });
+      });
+
+      it('overwrite original slice', done => {
+        wrapper.setState({ action: 'overwrite' });
+        wrapper.instance().saveOrOverwrite(false);
+        defaultProps.actions.saveSlice().then(() => {
+          expect(window.location.assign.callCount).toEqual(1);
+          expect(window.location.assign.getCall(0).args[0]).toEqual(
+            '/mock_slice/',
+          );
+          done();
+        });
+      });
     });
   });
 
@@ -199,15 +272,14 @@ describe('SaveModal', () => {
       return actionThunk(dispatch);
     };
 
-    it('makes the fetch request', () => (
+    it('makes the fetch request', () =>
       makeRequest().then(() => {
         expect(fetchMock.calls(saveEndpoint)).toHaveLength(1);
 
         return Promise.resolve();
-      })
-    ));
+      }));
 
-    it('calls correct actions on success', () => (
+    it('calls correct actions on success', () =>
       makeRequest().then(() => {
         expect(dispatch.callCount).toBe(1);
         expect(dispatch.getCall(0).args[0].type).toBe(
@@ -215,17 +287,24 @@ describe('SaveModal', () => {
         );
 
         return Promise.resolve();
-      })
-    ));
+      }));
 
     it('calls correct actions on error', () => {
-      fetchMock.get(saveEndpoint, { throws: 'error' }, { overwriteRoutes: true });
+      fetchMock.get(
+        saveEndpoint,
+        { throws: 'error' },
+        { overwriteRoutes: true },
+      );
 
       return makeRequest().then(() => {
         expect(dispatch.callCount).toBe(1);
-        expect(dispatch.getCall(0).args[0].type).toBe(saveModalActions.FETCH_DASHBOARDS_FAILED);
+        expect(dispatch.getCall(0).args[0].type).toBe(
+          saveModalActions.FETCH_DASHBOARDS_FAILED,
+        );
 
-        fetchMock.get(saveEndpoint, mockDashboardData, { overwriteRoutes: true });
+        fetchMock.get(saveEndpoint, mockDashboardData, {
+          overwriteRoutes: true,
+        });
 
         return Promise.resolve();
       });
@@ -233,13 +312,13 @@ describe('SaveModal', () => {
   });
 
   it('removeAlert', () => {
-    sinon.spy(saveModalActions, 'removeSaveModalAlert');
+    sinon.spy(defaultProps.actions, 'removeSaveModalAlert');
     const wrapper = getWrapper();
     wrapper.setProps({ alert: 'old alert' });
 
     wrapper.instance().removeAlert();
-    expect(saveModalActions.removeSaveModalAlert.callCount).toBe(1);
+    expect(defaultProps.actions.removeSaveModalAlert.callCount).toBe(1);
     expect(wrapper.state().alert).toBeNull();
-    saveModalActions.removeSaveModalAlert.restore();
+    defaultProps.actions.removeSaveModalAlert.restore();
   });
 });

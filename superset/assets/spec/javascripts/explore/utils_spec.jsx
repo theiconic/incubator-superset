@@ -1,5 +1,29 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+import sinon from 'sinon';
+
 import URI from 'urijs';
-import { getExploreUrlAndPayload, getExploreLongUrl } from '../../../src/explore/exploreUtils';
+import {
+  getExploreUrlAndPayload,
+  getExploreLongUrl,
+} from '../../../src/explore/exploreUtils';
+import * as hostNamesConfig from '../../../src/utils/hostNamesConfig';
 
 describe('exploreUtils', () => {
   const location = window.location;
@@ -23,10 +47,7 @@ describe('exploreUtils', () => {
         force: false,
         curUrl: 'http://superset.com',
       });
-      compareURI(
-        URI(url),
-        URI('/superset/explore/'),
-      );
+      compareURI(URI(url), URI('/superset/explore/'));
       expect(payload).toEqual(formData);
     });
     it('generates proper json url', () => {
@@ -36,10 +57,7 @@ describe('exploreUtils', () => {
         force: false,
         curUrl: 'http://superset.com',
       });
-      compareURI(
-        URI(url),
-        URI('/superset/explore_json/'),
-      );
+      compareURI(URI(url), URI('/superset/explore_json/'));
       expect(payload).toEqual(formData);
     });
     it('generates proper json forced url', () => {
@@ -51,8 +69,7 @@ describe('exploreUtils', () => {
       });
       compareURI(
         URI(url),
-        URI('/superset/explore_json/')
-          .search({ force: 'true' }),
+        URI('/superset/explore_json/').search({ force: 'true' }),
       );
       expect(payload).toEqual(formData);
     });
@@ -65,8 +82,7 @@ describe('exploreUtils', () => {
       });
       compareURI(
         URI(url),
-        URI('/superset/explore_json/')
-          .search({ csv: 'true' }),
+        URI('/superset/explore_json/').search({ csv: 'true' }),
       );
       expect(payload).toEqual(formData);
     });
@@ -79,8 +95,7 @@ describe('exploreUtils', () => {
       });
       compareURI(
         URI(url),
-        URI('/superset/explore/')
-          .search({ standalone: 'true' }),
+        URI('/superset/explore/').search({ standalone: 'true' }),
       );
       expect(payload).toEqual(formData);
     });
@@ -93,8 +108,7 @@ describe('exploreUtils', () => {
       });
       compareURI(
         URI(url),
-        URI('/superset/explore_json/')
-          .search({ foo: 'bar' }),
+        URI('/superset/explore_json/').search({ foo: 'bar' }),
       );
       expect(payload).toEqual(formData);
     });
@@ -107,8 +121,7 @@ describe('exploreUtils', () => {
       });
       compareURI(
         URI(url),
-        URI('/superset/explore_json/')
-          .search({ foo: 'bar' }),
+        URI('/superset/explore_json/').search({ foo: 'bar' }),
       );
       expect(payload).toEqual(formData);
     });
@@ -121,10 +134,78 @@ describe('exploreUtils', () => {
       });
       compareURI(
         URI(url),
-        URI('/superset/explore_json/')
-          .search({ foo: 'bar' }),
+        URI('/superset/explore_json/').search({ foo: 'bar' }),
       );
       expect(payload).toEqual(formData);
+    });
+  });
+
+  describe('domain sharding', () => {
+    let stub;
+    const availableDomains = [
+      'http://localhost/',
+      'domain1.com',
+      'domain2.com',
+      'domain3.com',
+    ];
+    beforeEach(() => {
+      stub = sinon
+        .stub(hostNamesConfig, 'availableDomains')
+        .value(availableDomains);
+    });
+    afterEach(() => {
+      stub.restore();
+    });
+
+    it('generate url to different domains', () => {
+      let url = getExploreUrlAndPayload({
+        formData,
+        endpointType: 'json',
+        allowDomainSharding: true,
+      }).url;
+      expect(url).toMatch(availableDomains[0]);
+
+      url = getExploreUrlAndPayload({
+        formData,
+        endpointType: 'json',
+        allowDomainSharding: true,
+      }).url;
+      expect(url).toMatch(availableDomains[1]);
+
+      url = getExploreUrlAndPayload({
+        formData,
+        endpointType: 'json',
+        allowDomainSharding: true,
+      }).url;
+      expect(url).toMatch(availableDomains[2]);
+
+      url = getExploreUrlAndPayload({
+        formData,
+        endpointType: 'json',
+        allowDomainSharding: true,
+      }).url;
+      expect(url).toMatch(availableDomains[3]);
+
+      // circle back to first available domain
+      url = getExploreUrlAndPayload({
+        formData,
+        endpointType: 'json',
+        allowDomainSharding: true,
+      }).url;
+      expect(url).toMatch(availableDomains[0]);
+    });
+    it('not generate url to different domains without flag', () => {
+      let csvURL = getExploreUrlAndPayload({
+        formData,
+        endpointType: 'csv',
+      }).url;
+      expect(csvURL).toMatch(availableDomains[0]);
+
+      csvURL = getExploreUrlAndPayload({
+        formData,
+        endpointType: 'csv',
+      }).url;
+      expect(csvURL).toMatch(availableDomains[0]);
     });
   });
 

@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 import React from 'react';
 import { shallow } from 'enzyme';
 
@@ -43,7 +61,12 @@ describe('MetricOption', () => {
   it('shows a label with metric_name when no verbose_name', () => {
     props.metric.verbose_name = null;
     wrapper = shallow(factory(props));
-    expect(wrapper.find('.option-label').first().text()).toBe('foo');
+    expect(
+      wrapper
+        .find('.option-label')
+        .first()
+        .text(),
+    ).toBe('foo');
   });
   it('shows only 1 InfoTooltipWithTrigger when no descr and no warning', () => {
     props.metric.warning_text = null;

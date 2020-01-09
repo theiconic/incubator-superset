@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 import React from 'react';
 import PropTypes from 'prop-types';
 import { Button } from 'react-bootstrap';
@@ -19,6 +37,7 @@ import AsyncSelect from '../../components/AsyncSelect';
 const propTypes = {
   actions: PropTypes.object.isRequired,
   height: PropTypes.string.isRequired,
+  displayLimit: PropTypes.number.isRequired,
 };
 
 class QuerySearch extends React.PureComponent {
@@ -114,7 +133,7 @@ class QuerySearch extends React.PureComponent {
   }
 
   insertParams(baseUrl, params) {
-    const validParams = params.filter(function (p) {
+    const validParams = params.filter(function(p) {
       return p !== '';
     });
     return baseUrl + '?' + validParams.join('&');
@@ -139,16 +158,24 @@ class QuerySearch extends React.PureComponent {
   userMutator(data) {
     const options = [];
     for (let i = 0; i < data.pks.length; i++) {
-      options.push({ value: data.pks[i], label: this.userLabel(data.result[i]) });
+      options.push({
+        value: data.pks[i],
+        label: this.userLabel(data.result[i]),
+      });
     }
     return options;
   }
 
   dbMutator(data) {
-    const options = data.result.map(db => ({ value: db.id, label: db.database_name }));
+    const options = data.result.map(db => ({
+      value: db.id,
+      label: db.database_name,
+    }));
     this.props.actions.setDatabases(data.result);
     if (data.result.length === 0) {
-      this.props.actions.addDangerToast(t("It seems you don't have access to any database"));
+      this.props.actions.addDangerToast(
+        t("It seems you don't have access to any database"),
+      );
     }
     return options;
   }
@@ -160,16 +187,22 @@ class QuerySearch extends React.PureComponent {
       this.state.databaseId ? `database_id=${this.state.databaseId}` : '',
       this.state.searchText ? `search_text=${this.state.searchText}` : '',
       this.state.status ? `status=${this.state.status}` : '',
-      this.state.from ? `from=${this.getTimeFromSelection(this.state.from)}` : '',
+      this.state.from
+        ? `from=${this.getTimeFromSelection(this.state.from)}`
+        : '',
       this.state.to ? `to=${this.getTimeFromSelection(this.state.to)}` : '',
     ];
 
-    SupersetClient.get({ endpoint: this.insertParams('/superset/search_queries', params) })
+    SupersetClient.get({
+      endpoint: this.insertParams('/superset/search_queries', params),
+    })
       .then(({ json }) => {
         this.setState({ queriesArray: json, queriesLoading: false });
       })
       .catch(() => {
-        this.props.actions.addDangerToast(t('An error occurred when refreshing queries'));
+        this.props.actions.addDangerToast(
+          t('An error occurred when refreshing queries'),
+        );
       });
   }
 
@@ -189,7 +222,7 @@ class QuerySearch extends React.PureComponent {
           <div className="col-sm-2">
             <AsyncSelect
               onChange={this.onChange}
-              dataEndpoint="/databaseasync/api/read?_flt_0_expose_in_sqllab=1"
+              dataEndpoint="/api/v1/database/?q=(filters:!((col:expose_in_sqllab,opr:eq,value:!t)))"
               value={this.state.databaseId}
               mutator={this.dbMutator}
               placeholder={t('Filter by database')}
@@ -229,14 +262,21 @@ class QuerySearch extends React.PureComponent {
             <Select
               name="select-status"
               placeholder={t('Filter by status')}
-              options={Object.keys(STATUS_OPTIONS).map(s => ({ value: s, label: s }))}
+              options={Object.keys(STATUS_OPTIONS).map(s => ({
+                value: s,
+                label: s,
+              }))}
               value={this.state.status}
               isLoading={false}
               autosize={false}
               onChange={this.changeStatus}
             />
 
-            <Button bsSize="small" bsStyle="success" onClick={this.refreshQueries}>
+            <Button
+              bsSize="small"
+              bsStyle="success"
+              onClick={this.refreshQueries}
+            >
               {t('Search')}
             </Button>
           </div>
@@ -245,13 +285,26 @@ class QuerySearch extends React.PureComponent {
           {this.state.queriesLoading ? (
             <Loading />
           ) : (
-            <div className="scrollbar-content" style={{ height: this.props.height }}>
+            <div
+              className="scrollbar-content"
+              style={{ height: this.props.height }}
+            >
               <QueryTable
-                columns={['state', 'db', 'user', 'time', 'progress', 'rows', 'sql', 'querylink']}
+                columns={[
+                  'state',
+                  'db',
+                  'user',
+                  'time',
+                  'progress',
+                  'rows',
+                  'sql',
+                  'querylink',
+                ]}
                 onUserClicked={this.onUserClicked}
                 onDbClicked={this.onDbClicked}
                 queries={this.state.queriesArray}
                 actions={this.props.actions}
+                displayLimit={this.props.displayLimit}
               />
             </div>
           )}

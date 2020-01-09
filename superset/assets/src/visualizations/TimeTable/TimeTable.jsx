@@ -1,16 +1,35 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 import React from 'react';
 import PropTypes from 'prop-types';
 import Mustache from 'mustache';
 import { scaleLinear } from 'd3-scale';
-import { Table, Thead, Th, Tr, Td } from 'reactable';
+import { Table, Thead, Th, Tr, Td } from 'reactable-arc';
+import { formatNumber } from '@superset-ui/number-format';
+import { formatTime } from '@superset-ui/time-format';
+import moment from 'moment';
 
 import MetricOption from '../../components/MetricOption';
-import { formatDateThunk } from '../../modules/dates';
-import { d3format } from '../../modules/utils';
 import InfoTooltipWithTrigger from '../../components/InfoTooltipWithTrigger';
 import FormattedNumber from './FormattedNumber';
 import SparklineCell from './SparklineCell';
-import './TimeTable.css';
+import './TimeTable.less';
 
 const ACCESSIBLE_COLOR_BOUNDS = ['#ca0020', '#0571b0'];
 
@@ -38,22 +57,26 @@ const propTypes = {
   // Example
   // {'2018-04-14 00:00:00': { 'SUM(metric_value)': 80031779.40047 }}
   data: PropTypes.objectOf(PropTypes.objectOf(PropTypes.number)).isRequired,
-  columnConfigs: PropTypes.arrayOf(PropTypes.shape({
-    colType: PropTypes.string,
-    comparisonType: PropTypes.string,
-    d3format: PropTypes.string,
-    key: PropTypes.string,
-    label: PropTypes.string,
-    timeLag: PropTypes.number,
-  })).isRequired,
-  rows: PropTypes.arrayOf(PropTypes.oneOfType([
+  columnConfigs: PropTypes.arrayOf(
     PropTypes.shape({
+      colType: PropTypes.string,
+      comparisonType: PropTypes.string,
+      d3format: PropTypes.string,
+      key: PropTypes.string,
       label: PropTypes.string,
+      timeLag: PropTypes.number,
     }),
-    PropTypes.shape({
-      metric_name: PropTypes.string,
-    }),
-  ])).isRequired,
+  ).isRequired,
+  rows: PropTypes.arrayOf(
+    PropTypes.oneOfType([
+      PropTypes.shape({
+        label: PropTypes.string,
+      }),
+      PropTypes.shape({
+        metric_name: PropTypes.string,
+      }),
+    ]),
+  ).isRequired,
   rowType: PropTypes.oneOf(['column', 'metric']).isRequired,
   url: PropTypes.string,
 };
@@ -73,11 +96,7 @@ class TimeTable extends React.PureComponent {
       const column = row;
       if (fullUrl) {
         return (
-          <a
-            href={fullUrl}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
+          <a href={fullUrl} rel="noopener noreferrer" target="_blank">
             {column.label}
           </a>
         );
@@ -113,8 +132,6 @@ class TimeTable extends React.PureComponent {
       sparkData = entries.map(d => d[valueField]);
     }
 
-    const formatDate = formatDateThunk(column.dateFormat);
-
     return (
       <Td
         column={column.key}
@@ -131,8 +148,13 @@ class TimeTable extends React.PureComponent {
           showYAxis={column.showYAxis}
           renderTooltip={({ index }) => (
             <div>
-              <strong>{d3format(column.d3format, sparkData[index])}</strong>
-              <div>{formatDate(entries[index].time)}</div>
+              <strong>{formatNumber(column.d3format, sparkData[index])}</strong>
+              <div>
+                {formatTime(
+                  column.dateFormat,
+                  moment.utc(entries[index].time).toDate(),
+                )}
+              </div>
             </div>
           )}
         />
@@ -146,10 +168,10 @@ class TimeTable extends React.PureComponent {
     let errorMsg;
     if (column.colType === 'time') {
       // Time lag ratio
-      const { timeLag } = column;
+      const timeLag = column.timeLag || 0;
       const totalLag = Object.keys(reversedEntries).length;
-      if (timeLag > totalLag) {
-        errorMsg = `The time lag set at ${timeLag} exceeds the length of data at ${reversedEntries.length}. No data available.`;
+      if (timeLag >= totalLag) {
+        errorMsg = `The time lag set at ${timeLag} is too large for the length of data at ${reversedEntries.length}. No data available.`;
       } else {
         v = reversedEntries[timeLag][valueField];
       }
@@ -158,19 +180,22 @@ class TimeTable extends React.PureComponent {
       } else if (column.comparisonType === 'perc') {
         v = recent / v;
       } else if (column.comparisonType === 'perc_change') {
-        v = (recent / v) - 1;
+        v = recent / v - 1;
       }
       v = v || 0;
     } else if (column.colType === 'contrib') {
       // contribution to column total
-      v = recent / Object.keys(reversedEntries[0])
-        .map(k => k !== 'time' ? reversedEntries[0][k] : null)
-        .reduce((a, b) => a + b);
+      v =
+        recent /
+        Object.keys(reversedEntries[0])
+          .map(k => (k !== 'time' ? reversedEntries[0][k] : null))
+          .reduce((a, b) => a + b);
     } else if (column.colType === 'avg') {
       // Average over the last {timeLag}
-      v = reversedEntries
-        .map((k, i) => i < column.timeLag ? k[valueField] : 0)
-        .reduce((a, b) => a + b) / column.timeLag;
+      v =
+        reversedEntries
+          .map((k, i) => (i < column.timeLag ? k[valueField] : 0))
+          .reduce((a, b) => a + b) / column.timeLag;
     }
 
     const color = colorFromBounds(v, column.bounds);
@@ -180,16 +205,20 @@ class TimeTable extends React.PureComponent {
         column={column.key}
         key={column.key}
         value={v}
-        style={color && {
-          boxShadow: `inset 0px -2.5px 0px 0px ${color}`,
-          borderRight: '2px solid #fff',
-        }}
+        style={
+          color && {
+            boxShadow: `inset 0px -2.5px 0px 0px ${color}`,
+            borderRight: '2px solid #fff',
+          }
+        }
       >
-        {errorMsg
-          ? (<div>{errorMsg}</div>)
-          : (<div style={{ color }}>
+        {errorMsg ? (
+          <div>{errorMsg}</div>
+        ) : (
+          <div style={{ color }}>
             <FormattedNumber num={v} format={column.d3format} />
-          </div>)}
+          </div>
+        )}
       </Td>
     );
   }
@@ -204,9 +233,11 @@ class TimeTable extends React.PureComponent {
         <Td column="metric" data={leftCell}>
           {leftCell}
         </Td>
-        {columnConfigs.map(c => c.colType === 'spark'
-          ? this.renderSparklineCell(valueField, c, entries)
-          : this.renderValueCell(valueField, c, reversedEntries))}
+        {columnConfigs.map(c =>
+          c.colType === 'spark'
+            ? this.renderSparklineCell(valueField, c, entries)
+            : this.renderValueCell(valueField, c, reversedEntries),
+        )}
       </Tr>
     );
   }
@@ -226,16 +257,16 @@ class TimeTable extends React.PureComponent {
       .map(time => ({ ...data[time], time }));
     const reversedEntries = entries.concat().reverse();
 
-    const defaultSort = rowType === 'column' && columnConfigs.length ? {
-      column: columnConfigs[0].key,
-      direction: 'desc',
-    } : false;
+    const defaultSort =
+      rowType === 'column' && columnConfigs.length
+        ? {
+            column: columnConfigs[0].key,
+            direction: 'desc',
+          }
+        : false;
 
     return (
-      <div
-        className={`time-table ${className}`}
-        style={{ height }}
-      >
+      <div className={`time-table ${className}`} style={{ height }}>
         <Table
           className="table table-no-hover"
           defaultSort={defaultSort}
@@ -250,14 +281,16 @@ class TimeTable extends React.PureComponent {
                 column={c.key}
                 width={c.colType === 'spark' ? '1%' : null}
               >
-                {c.label} {c.tooltip && (
+                {c.label}{' '}
+                {c.tooltip && (
                   <InfoTooltipWithTrigger
                     tooltip={c.tooltip}
                     label={`tt-col-${i}`}
                     placement="top"
                   />
                 )}
-              </Th>))}
+              </Th>
+            ))}
           </Thead>
           {rows.map(row => this.renderRow(row, entries, reversedEntries))}
         </Table>

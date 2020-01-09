@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 import React from 'react';
 import Select from 'react-select';
 import { shallow } from 'enzyme';
@@ -26,15 +44,11 @@ describe('AsyncSelect', () => {
   };
 
   it('is valid element', () => {
-    expect(
-      React.isValidElement(<AsyncSelect {...mockedProps} />),
-    ).toBe(true);
+    expect(React.isValidElement(<AsyncSelect {...mockedProps} />)).toBe(true);
   });
 
   it('has one select', () => {
-    const wrapper = shallow(
-      <AsyncSelect {...mockedProps} />,
-    );
+    const wrapper = shallow(<AsyncSelect {...mockedProps} />);
     expect(wrapper.find(Select)).toHaveLength(1);
   });
 
@@ -49,13 +63,11 @@ describe('AsyncSelect', () => {
   });
 
   describe('auto select', () => {
-    it('should not call onChange if autoSelect=false', (done) => {
+    it('should not call onChange if autoSelect=false', done => {
       expect.assertions(2);
 
       const onChangeSpy = jest.fn();
-      shallow(
-        <AsyncSelect {...mockedProps} onChange={onChangeSpy} />,
-      );
+      shallow(<AsyncSelect {...mockedProps} onChange={onChangeSpy} />);
 
       setTimeout(() => {
         expect(fetchMock.calls(dataGlob)).toHaveLength(1);
@@ -64,7 +76,7 @@ describe('AsyncSelect', () => {
       });
     });
 
-    it('should auto select the first option if autoSelect=true', (done) => {
+    it('should auto select the first option if autoSelect=true', done => {
       expect.assertions(3);
 
       const onChangeSpy = jest.fn();
@@ -80,12 +92,17 @@ describe('AsyncSelect', () => {
       });
     });
 
-    it('should not auto select when value prop is set and autoSelect=true', (done) => {
+    it('should not auto select when value prop is set and autoSelect=true', done => {
       expect.assertions(3);
 
       const onChangeSpy = jest.fn();
       const wrapper = shallow(
-        <AsyncSelect {...mockedProps} value={2} onChange={onChangeSpy} autoSelect />,
+        <AsyncSelect
+          {...mockedProps}
+          value={2}
+          onChange={onChangeSpy}
+          autoSelect
+        />,
       );
 
       setTimeout(() => {
@@ -96,7 +113,7 @@ describe('AsyncSelect', () => {
       });
     });
 
-    it('should call onAsyncError if there is an error fetching options', (done) => {
+    it('should call onAsyncError if there is an error fetching options', done => {
       expect.assertions(3);
 
       const errorEndpoint = 'async/error/';
@@ -105,7 +122,11 @@ describe('AsyncSelect', () => {
 
       const onAsyncError = jest.fn();
       shallow(
-        <AsyncSelect {...mockedProps} dataEndpoint={errorEndpoint} onAsyncError={onAsyncError} />,
+        <AsyncSelect
+          {...mockedProps}
+          dataEndpoint={errorEndpoint}
+          onAsyncError={onAsyncError}
+        />,
       );
 
       setTimeout(() => {

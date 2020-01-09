@@ -1,7 +1,26 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 const os = require('os');
 const path = require('path');
 const webpack = require('webpack');
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer')
+  .BundleAnalyzerPlugin;
 const CleanWebpackPlugin = require('clean-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin');
@@ -59,10 +78,12 @@ if (isDevMode) {
   plugins.push(new webpack.HotModuleReplacementPlugin());
 } else {
   // text loading (webpack 4+)
-  plugins.push(new MiniCssExtractPlugin({
-    filename: '[name].[chunkhash].entry.css',
-    chunkFilename: '[name].[chunkhash].chunk.css',
-  }));
+  plugins.push(
+    new MiniCssExtractPlugin({
+      filename: '[name].[chunkhash].entry.css',
+      chunkFilename: '[name].[chunkhash].chunk.css',
+    }),
+  );
   plugins.push(new OptimizeCSSAssetsPlugin());
 }
 
@@ -79,10 +100,7 @@ if (isDevMode) {
   output.chunkFilename = '[name].[chunkhash].chunk.js';
 }
 
-const PREAMBLE = [
-  'babel-polyfill',
-  path.join(APP_DIR, '/src/preamble.js'),
-];
+const PREAMBLE = ['babel-polyfill', path.join(APP_DIR, '/src/preamble.js')];
 
 function addPreamble(entry) {
   return PREAMBLE.concat([path.join(APP_DIR, entry)]);
@@ -101,6 +119,7 @@ const config = {
     sqllab: addPreamble('/src/SqlLab/index.jsx'),
     welcome: addPreamble('/src/welcome/index.jsx'),
     profile: addPreamble('/src/profile/index.jsx'),
+    showSavedQuery: [path.join(APP_DIR, '/src/showSavedQuery/index.jsx')],
   },
   output,
   optimization: {
@@ -122,6 +141,7 @@ const config = {
       src: path.resolve(APP_DIR, './src'),
     },
     extensions: ['.ts', '.tsx', '.js', '.jsx'],
+    symlinks: false,
   },
   context: APP_DIR, // to automatically find tsconfig.json
   module: {
@@ -140,7 +160,7 @@ const config = {
           {
             loader: 'thread-loader',
             options: {
-                // there should be 1 cpu for the fork-ts-checker-webpack-plugin
+              // there should be 1 cpu for the fork-ts-checker-webpack-plugin
               workers: os.cpus().length - 1,
             },
           },
@@ -157,14 +177,39 @@ const config = {
       {
         test: /\.jsx?$/,
         exclude: /node_modules/,
+        include: APP_DIR,
         loader: 'babel-loader',
       },
       {
+        // handle symlinked modules
+        // for debugging @superset-ui packages via npm link
+        test: /\.jsx?$/,
+        include: /node_modules\/[@]superset[-]ui.+\/src/,
+        use: [
+          {
+            loader: 'babel-loader',
+            options: {
+              presets: ['airbnb', '@babel/preset-react', '@babel/preset-env'],
+              plugins: [
+                'lodash',
+                '@babel/plugin-syntax-dynamic-import',
+                'react-hot-loader/babel',
+              ],
+            },
+          },
+        ],
+      },
+      {
         test: /\.css$/,
-        include: APP_DIR,
+        include: [APP_DIR, /superset[-]ui.+\/src/],
         use: [
           isDevMode ? 'style-loader' : MiniCssExtractPlugin.loader,
-          'css-loader',
+          {
+            loader: 'css-loader',
+            options: {
+              sourceMap: isDevMode,
+            },
+          },
         ],
       },
       {
@@ -172,8 +217,18 @@ const config = {
         include: APP_DIR,
         use: [
           isDevMode ? 'style-loader' : MiniCssExtractPlugin.loader,
-          'css-loader',
-          'less-loader',
+          {
+            loader: 'css-loader',
+            options: {
+              sourceMap: isDevMode,
+            },
+          },
+          {
+            loader: 'less-loader',
+            options: {
+              sourceMap: isDevMode,
+            },
+          },
         ],
       },
       /* for css linking images */
@@ -232,7 +287,7 @@ const config = {
 if (!isDevMode) {
   config.optimization.minimizer = [
     new TerserPlugin({
-      cache: true,
+      cache: '.terser-plugin-cache/',
       parallel: true,
       extractComments: true,
     }),

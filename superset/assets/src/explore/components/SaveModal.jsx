@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 /* eslint camelcase: 0 */
 import React from 'react';
 import PropTypes from 'prop-types';
@@ -36,7 +54,24 @@ class SaveModal extends React.Component {
     };
   }
   componentDidMount() {
-    this.props.actions.fetchDashboards(this.props.userId);
+    this.props.actions.fetchDashboards(this.props.userId).then(() => {
+      const dashboardIds = this.props.dashboards.map(
+        dashboard => dashboard.value,
+      );
+      let recentDashboard = sessionStorage.getItem(
+        'save_chart_recent_dashboard',
+      );
+      recentDashboard = recentDashboard && parseInt(recentDashboard, 10);
+      if (
+        recentDashboard !== null &&
+        dashboardIds.indexOf(recentDashboard) !== -1
+      ) {
+        this.setState({
+          saveToDashboardId: recentDashboard,
+          addToDash: 'existing',
+        });
+      }
+    });
   }
   onChange(name, event) {
     switch (name) {
@@ -106,14 +141,24 @@ class SaveModal extends React.Component {
     }
     sliceParams.goto_dash = gotodash;
 
-    this.props.actions.saveSlice(this.props.form_data, sliceParams).then(({ data }) => {
-      // Go to new slice url or dashboard url
-      if (gotodash) {
-        window.location = supersetURL(data.dashboard);
-      } else {
-        window.location = data.slice.slice_url;
-      }
-    });
+    this.props.actions
+      .saveSlice(this.props.form_data, sliceParams)
+      .then(({ data }) => {
+        if (data.dashboard_id === null) {
+          sessionStorage.removeItem('save_chart_recent_dashboard');
+        } else {
+          sessionStorage.setItem(
+            'save_chart_recent_dashboard',
+            data.dashboard_id,
+          );
+        }
+        // Go to new slice url or dashboard url
+        if (gotodash) {
+          window.location.assign(supersetURL(data.dashboard));
+        } else {
+          window.location.assign(data.slice.slice_url);
+        }
+      });
     this.props.onHide();
   }
   removeAlert() {
@@ -123,7 +168,8 @@ class SaveModal extends React.Component {
     this.setState({ alert: null });
   }
   render() {
-    const canNotSaveToDash = EXPLORE_ONLY_VIZ_TYPE.indexOf(this.state.vizType) > -1;
+    const canNotSaveToDash =
+      EXPLORE_ONLY_VIZ_TYPE.indexOf(this.state.vizType) > -1;
     return (
       <Modal show onHide={this.props.onHide} bsStyle="large">
         <Modal.Header closeButton>
@@ -251,7 +297,4 @@ function mapStateToProps({ explore, saveModal }) {
 }
 
 export { SaveModal };
-export default connect(
-  mapStateToProps,
-  () => ({}),
-)(SaveModal);
+export default connect(mapStateToProps, () => ({}))(SaveModal);

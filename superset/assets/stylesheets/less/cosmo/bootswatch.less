@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 // Forked Cosmo 3.3.7
 // Bootswatch
 // -----------------------------------------------------
@@ -6,12 +24,22 @@
 
 .navbar {
   border: none;
+
+  li > a:focus {
+    outline: 0;
+  }
+
   &-inverse {
 
     .badge {
       background-color: #fff;
       color: @brand-primary;
     }
+  }
+
+  .caret {
+    display: inline-block;
+    padding: 0 5px 18px 5px;
   }
 }
 
@@ -66,35 +94,13 @@
 
 .caret:before {
   font-family: "FontAwesome";
-  font-size: 10px;
+  font-size: @font-size-xs;
   content: "\f078";
 }
 
 .caret:hover {
   color: @gray-darker;
 }
-
-.dropdown-toggle.btn .caret {
-  margin-left: 6px;
-  margin-top: -21px;
-  margin-right: 6px;
-}
-
-.nav-tabs .dropdown-toggle.btn .caret  {
-  margin-left: -12px;
-  margin-top: -10px;
-}
-
-.navbar-nav .caret,
-.panel-title .caret {
-  margin-left: 6px;
-  margin-top: -24px;
-  margin-right: 6px;
-}
-
-
-
-
 
 // Typography =================================================================
 
@@ -275,7 +281,7 @@ table,
   border-radius: 2px;
 }
 label {
-  font-weight: normal;
+  font-weight: @font-weight-normal;
 }
 
 // Progress bars ==============================================================
@@ -284,7 +290,7 @@ label {
   height: 14px;
   .box-shadow(none);
   .progress-bar {
-    font-size: 12px;
+    font-size: @font-size-s;
     line-height: 12px;
     padding-top: 1px;
   }
@@ -311,14 +317,14 @@ label {
       border-bottom: 1px solid @gray-light;
       h1, h2, h3, h4, h5, h6 {
         margin: 10px 0 0 0;
-        font-weight: bold;
+        font-weight: @font-weight-bold;
       }
     }
     .close {
       color: @text-color;
     }
   }
-  &-primary{
+  &-primary {
     .panel-heading {
       padding: 15px 15px 0 15px;
       background-color: transparent;
@@ -329,7 +335,7 @@ label {
       border-bottom: 1px solid @gray-light;
       h1, h2, h3, h4, h5, h6 {
         margin: 10px 0 0 0;
-        font-weight: bold;
+        font-weight: @font-weight-bold;
       }
     }
     .close {
@@ -390,9 +396,13 @@ a.list-group-item {
 
 // Tabs ==============================================================
 
+.nav-tabs > li > a {
+  border-top: 3px solid transparent;
+}
+
 .nav-tabs > li.active > a, .nav-tabs > li.active > a:hover, .nav-tabs > li.active > a:focus {
   background-color: #fff;
-  font-weight: bold;
+  font-weight: @font-weight-bold;
   border-top: 3px solid @brand-primary;
 }
 

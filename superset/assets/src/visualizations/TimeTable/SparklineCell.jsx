@@ -1,8 +1,33 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 import React from 'react';
 import PropTypes from 'prop-types';
-import { Sparkline, LineSeries, PointSeries, HorizontalReferenceLine, VerticalReferenceLine, WithTooltip } from '@data-ui/sparkline';
-import { d3format } from '../../modules/utils';
-import { getTextDimension } from '../../modules/visUtils';
+import {
+  Sparkline,
+  LineSeries,
+  PointSeries,
+  HorizontalReferenceLine,
+  VerticalReferenceLine,
+  WithTooltip,
+} from '@data-ui/sparkline';
+import { formatNumber } from '@superset-ui/number-format';
+import { getTextDimension } from '@superset-ui/dimension';
 
 const propTypes = {
   className: PropTypes.string,
@@ -23,7 +48,9 @@ const defaultProps = {
   numberFormat: undefined,
   yAxisBounds: [null, null],
   showYAxis: false,
-  renderTooltip() { return <div />; },
+  renderTooltip() {
+    return <div />;
+  },
 };
 
 const MARGIN = {
@@ -40,18 +67,25 @@ const tooltipProps = {
 };
 
 function getSparklineTextWidth(text) {
-  return getTextDimension({
-    text,
-    style: {
-      fontSize: '12px',
-      fontWeight: 200,
-      letterSpacing: 0.4,
-    },
-  }).width + 5;
+  return (
+    getTextDimension({
+      text,
+      style: {
+        fontSize: '12px',
+        fontWeight: 200,
+        letterSpacing: 0.4,
+      },
+    }).width + 5
+  );
 }
 
 function isValidBoundValue(value) {
-  return value !== null && value !== undefined && value !== '' && !Number.isNaN(value);
+  return (
+    value !== null &&
+    value !== undefined &&
+    value !== '' &&
+    !Number.isNaN(value)
+  );
 }
 
 class SparklineCell extends React.Component {
@@ -110,8 +144,8 @@ class SparklineCell extends React.Component {
         ? maxBound
         : data.reduce((acc, current) => Math.max(acc, current), data[0]);
 
-      minLabel = d3format(numberFormat, min);
-      maxLabel = d3format(numberFormat, max);
+      minLabel = formatNumber(numberFormat, min);
+      maxLabel = formatNumber(numberFormat, max);
       labelLength = Math.max(
         getSparklineTextWidth(minLabel),
         getSparklineTextWidth(maxLabel),
@@ -140,26 +174,23 @@ class SparklineCell extends React.Component {
             onMouseMove={onMouseMove}
             {...yScale}
           >
-            {showYAxis &&
-              this.renderHorizontalReferenceLine(min, minLabel)}
-            {showYAxis &&
-              this.renderHorizontalReferenceLine(max, maxLabel)}
-            <LineSeries
-              showArea={false}
-              stroke="#767676"
-            />
-            {tooltipData &&
+            {showYAxis && this.renderHorizontalReferenceLine(min, minLabel)}
+            {showYAxis && this.renderHorizontalReferenceLine(max, maxLabel)}
+            <LineSeries showArea={false} stroke="#767676" />
+            {tooltipData && (
               <VerticalReferenceLine
                 reference={tooltipData.index}
                 strokeDasharray="3 3"
                 strokeWidth={1}
-              />}
-            {tooltipData &&
+              />
+            )}
+            {tooltipData && (
               <PointSeries
                 points={[tooltipData.index]}
                 fill="#767676"
                 strokeWidth={1}
-              />}
+              />
+            )}
           </Sparkline>
         )}
       </WithTooltip>

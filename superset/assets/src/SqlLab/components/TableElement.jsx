@@ -1,19 +1,38 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 import React from 'react';
 import PropTypes from 'prop-types';
-import { ButtonGroup, Collapse, Well } from 'react-bootstrap';
+import { ButtonGroup, Collapse, Fade, Well } from 'react-bootstrap';
 import shortid from 'shortid';
 import { t } from '@superset-ui/translation';
 
 import CopyToClipboard from '../../components/CopyToClipboard';
 import Link from './Link';
 import ColumnElement from './ColumnElement';
+import ShowSQL from './ShowSQL';
 import ModalTrigger from '../../components/ModalTrigger';
 import Loading from '../../components/Loading';
 
 const propTypes = {
   table: PropTypes.object,
   actions: PropTypes.object,
-  timeout: PropTypes.number,  // used for tests
+  timeout: PropTypes.number, // used for tests
 };
 
 const defaultProps = {
@@ -28,7 +47,16 @@ class TableElement extends React.PureComponent {
     this.state = {
       sortColumns: false,
       expanded: true,
+      hovered: false,
     };
+    this.removeFromStore = this.removeFromStore.bind(this);
+    this.toggleSortColumns = this.toggleSortColumns.bind(this);
+    this.removeTable = this.removeTable.bind(this);
+    this.setHover = this.setHover.bind(this);
+  }
+
+  setHover(hovered) {
+    this.setState({ hovered });
   }
 
   popSelectStar() {
@@ -91,7 +119,8 @@ class TableElement extends React.PureComponent {
           <div>
             <small>
               {t('latest partition:')} {latest}
-            </small> {partitionClipBoard}
+            </small>{' '}
+            {partitionClipBoard}
           </div>
         </Well>
       );
@@ -122,32 +151,39 @@ class TableElement extends React.PureComponent {
       );
     }
     return (
-      <ButtonGroup className="ws-el-controls pull-right">
+      <ButtonGroup className="ws-el-controls">
         {keyLink}
         <Link
           className={
             `fa fa-sort-${!this.state.sortColumns ? 'alpha' : 'numeric'}-asc ` +
-            'pull-left sort-cols m-l-2'}
-          onClick={this.toggleSortColumns.bind(this)}
+            'pull-left sort-cols m-l-2'
+          }
+          onClick={this.toggleSortColumns}
           tooltip={
-            !this.state.sortColumns ?
-            t('Sort columns alphabetically') :
-            t('Original table column order')}
+            !this.state.sortColumns
+              ? t('Sort columns alphabetically')
+              : t('Original table column order')
+          }
           href="#"
         />
-        {table.selectStar &&
+        {table.selectStar && (
           <CopyToClipboard
-            copyNode={
-              <a className="fa fa-clipboard pull-left m-l-2" />
-            }
+            copyNode={<a className="fa fa-clipboard pull-left m-l-2" />}
             text={table.selectStar}
             shouldShowText={false}
             tooltipText={t('Copy SELECT statement to the clipboard')}
           />
-        }
+        )}
+        {table.view && (
+          <ShowSQL
+            sql={table.view}
+            tooltipText={t('Show CREATE VIEW statement')}
+            title={t('CREATE VIEW statement')}
+          />
+        )}
         <Link
           className="fa fa-times table-remove pull-left m-l-2"
-          onClick={this.removeTable.bind(this)}
+          onClick={this.removeTable}
           tooltip={t('Remove table preview')}
           href="#"
         />
@@ -162,20 +198,29 @@ class TableElement extends React.PureComponent {
           <a
             href="#"
             className="table-name"
-            onClick={(e) => { this.toggleTable(e); }}
+            onClick={e => {
+              this.toggleTable(e);
+            }}
           >
-            <small className="m-r-5">
-              <i className={`fa fa-${table.expanded ? 'minus' : 'plus'}-square-o`} />
-            </small>
-            <strong>`{table.name}`</strong>
+            <strong>{table.name}</strong>
           </a>
         </div>
         <div className="pull-right">
-          {table.isMetadataLoading || table.isExtraMetadataLoading ?
-            <Loading size={20} />
-            :
-            this.renderControls()
-          }
+          {table.isMetadataLoading || table.isExtraMetadataLoading ? (
+            <Loading size={50} position="normal" className="margin-zero" />
+          ) : (
+            <Fade in={this.state.hovered}>{this.renderControls()}</Fade>
+          )}
+          <i
+            onClick={e => {
+              this.toggleTable(e);
+            }}
+            className={
+              'text-primary pointer m-l-10 ' +
+              'fa fa-lg ' +
+              `fa-angle-${table.expanded ? 'up' : 'down'}`
+            }
+          />
         </div>
       </div>
     );
@@ -186,20 +231,25 @@ class TableElement extends React.PureComponent {
     if (table.columns) {
       cols = table.columns.slice();
       if (this.state.sortColumns) {
-        cols.sort((a, b) => a.name.toUpperCase() > b.name.toUpperCase());
+        cols.sort((a, b) => {
+          const colA = a.name.toUpperCase();
+          const colB = b.name.toUpperCase();
+          if (colA < colB) {
+            return -1;
+          } else if (colA > colB) {
+            return 1;
+          }
+          return 0;
+        });
       }
     }
     const metadata = (
-      <Collapse
-        in={table.expanded}
-        timeout={this.props.timeout}
-      >
+      <Collapse in={table.expanded} timeout={this.props.timeout}>
         <div>
           {this.renderWell()}
           <div className="table-columns m-t-5">
-            {cols && cols.map(col => (
-              <ColumnElement column={col} key={col.name} />
-            ))}
+            {cols &&
+              cols.map(col => <ColumnElement column={col} key={col.name} />)}
           </div>
         </div>
       </Collapse>
@@ -212,14 +262,15 @@ class TableElement extends React.PureComponent {
       <Collapse
         in={this.state.expanded}
         timeout={this.props.timeout}
-        transitionAppear
-        onExited={this.removeFromStore.bind(this)}
+        onExited={this.removeFromStore}
       >
-        <div className="TableElement table-schema m-b-10">
+        <div
+          className="TableElement table-schema m-b-10"
+          onMouseEnter={() => this.setHover(true)}
+          onMouseLeave={() => this.setHover(false)}
+        >
           {this.renderHeader()}
-          <div>
-            {this.renderBody()}
-          </div>
+          <div>{this.renderBody()}</div>
         </div>
       </Collapse>
     );

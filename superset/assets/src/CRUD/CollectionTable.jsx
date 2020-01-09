@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 import React from 'react';
 import PropTypes from 'prop-types';
 import shortid from 'shortid';
@@ -5,7 +23,7 @@ import { t } from '@superset-ui/translation';
 import Button from '../components/Button';
 import Fieldset from './Fieldset';
 import { recurseReactClone } from './utils';
-import './styles.css';
+import './crud.less';
 
 const propTypes = {
   collection: PropTypes.arrayOf(PropTypes.object).isRequired,
@@ -31,10 +49,7 @@ const defaultProps = {
   expandFieldset: null,
   extraButtons: null,
 };
-const Frame = props => (
-  <div className="frame">
-    {props.children}
-  </div>);
+const Frame = props => <div className="frame">{props.children}</div>;
 Frame.propTypes = { children: PropTypes.node };
 
 function createKeyedCollection(arr) {
@@ -43,7 +58,7 @@ function createKeyedCollection(arr) {
     id: o.id || shortid.generate(),
   }));
   const map = {};
-  newArr.forEach((o) => {
+  newArr.forEach(o => {
     map[o.id] = o;
   });
   return map;
@@ -64,7 +79,7 @@ export default class CRUDCollection extends React.PureComponent {
     this.renderTableBody = this.renderTableBody.bind(this);
     this.changeCollection = this.changeCollection.bind(this);
   }
-  componentWillReceiveProps(nextProps) {
+  UNSAFE_componentWillReceiveProps(nextProps) {
     if (nextProps.collection !== this.props.collection) {
       this.setState({
         collection: createKeyedCollection(nextProps.collection),
@@ -79,7 +94,6 @@ export default class CRUDCollection extends React.PureComponent {
         [col]: val,
       },
     });
-
   }
   onAddItem() {
     let newItem = this.props.itemGenerator();
@@ -117,7 +131,9 @@ export default class CRUDCollection extends React.PureComponent {
   }
   effectiveTableColumns() {
     const { tableColumns, allowDeletes, expandFieldset } = this.props;
-    const cols = allowDeletes ? tableColumns.concat(['__actions']) : tableColumns;
+    const cols = allowDeletes
+      ? tableColumns.concat(['__actions'])
+      : tableColumns;
     return expandFieldset ? ['__expand'].concat(cols) : cols;
   }
   toggleExpand(id) {
@@ -135,7 +151,9 @@ export default class CRUDCollection extends React.PureComponent {
       <thead>
         <tr>
           {this.props.expandFieldset && <th className="tiny-cell" />}
-          {cols.map(col => <th key={col}>{this.getLabel(col)}</th>)}
+          {cols.map(col => (
+            <th key={col}>{this.getLabel(col)}</th>
+          ))}
           {this.props.allowDeletes && <th className="tiny-cell" />}
         </tr>
       </thead>
@@ -143,7 +161,11 @@ export default class CRUDCollection extends React.PureComponent {
   }
   renderExpandableSection(item) {
     const propsGenerator = () => ({ item, onChange: this.onFieldsetChange });
-    return recurseReactClone(this.props.expandFieldset, Fieldset, propsGenerator);
+    return recurseReactClone(
+      this.props.expandFieldset,
+      Fieldset,
+      propsGenerator,
+    );
   }
   renderCell(record, col) {
     const renderer = this.props.itemRenderers[col];
@@ -154,20 +176,26 @@ export default class CRUDCollection extends React.PureComponent {
   renderItem(record) {
     const { tableColumns, allowDeletes, expandFieldset } = this.props;
     /* eslint-disable no-underscore-dangle */
-    const isExpanded = !!this.state.expandedColumns[record.id] || record.__expanded;
+    const isExpanded =
+      !!this.state.expandedColumns[record.id] || record.__expanded;
     let tds = [];
     if (expandFieldset) {
       tds.push(
         <td key="__expand" className="expand">
           <i
-            className={`fa fa-caret-${isExpanded ? 'down' : 'right'} text-primary pointer`}
+            className={`fa fa-caret-${
+              isExpanded ? 'down' : 'right'
+            } text-primary pointer`}
             onClick={this.toggleExpand.bind(this, record.id)}
           />
-        </td>);
+        </td>,
+      );
     }
-    tds = tds.concat(tableColumns.map(col => (
-      <td key={col}>{this.renderCell(record, col)}</td>
-    )));
+    tds = tds.concat(
+      tableColumns.map(col => (
+        <td key={col}>{this.renderCell(record, col)}</td>
+      )),
+    );
     if (allowDeletes) {
       tds.push(
         <td key="__actions">
@@ -175,43 +203,57 @@ export default class CRUDCollection extends React.PureComponent {
             className="fa fa-close text-primary pointer"
             onClick={this.deleteItem.bind(this, record.id)}
           />
-        </td>);
+        </td>,
+      );
     }
-    const trs = [<tr className="row" key={record.id}>{tds}</tr>];
+    const trs = [
+      <tr className="row" key={record.id}>
+        {tds}
+      </tr>,
+    ];
     if (isExpanded) {
       trs.push(
         <tr className="exp" key={'exp__' + record.id}>
-          <td colSpan={this.effectiveTableColumns().length} className="expanded">
-            <div>
-              {this.renderExpandableSection(record)}
-            </div>
+          <td
+            colSpan={this.effectiveTableColumns().length}
+            className="expanded"
+          >
+            <div>{this.renderExpandableSection(record)}</div>
           </td>
-        </tr>);
+        </tr>,
+      );
     }
     return trs;
   }
   renderEmptyCell() {
-    return <tr><td className="empty-collection">{this.props.emptyMessage}</td></tr>;
+    return (
+      <tr>
+        <td className="empty-collection">{this.props.emptyMessage}</td>
+      </tr>
+    );
   }
   renderTableBody() {
-    const data = Object.keys(this.state.collection).map(k => this.state.collection[k]);
-    const content = data.length ? data.map(d => this.renderItem(d)) : this.renderEmptyCell();
+    const data = Object.keys(this.state.collection).map(
+      k => this.state.collection[k],
+    );
+    const content = data.length
+      ? data.map(d => this.renderItem(d))
+      : this.renderEmptyCell();
     return <tbody>{content}</tbody>;
   }
   render() {
     return (
       <div className="CRUD">
-        <table
-          className="table"
-        >
+        <table className="table">
           {this.renderHeaderRow()}
           {this.renderTableBody()}
         </table>
         <div>
-          {this.props.allowAddItem &&
+          {this.props.allowAddItem && (
             <Button bsStyle="primary" onClick={this.onAddItem}>
               <i className="fa fa-plus" /> {t('Add Item')}
-            </Button>}
+            </Button>
+          )}
           {this.props.extraButtons}
         </div>
       </div>

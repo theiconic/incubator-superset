@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 import React from 'react';
 import PropTypes from 'prop-types';
 import { FormControl, OverlayTrigger, Tooltip } from 'react-bootstrap';
@@ -46,7 +64,9 @@ export default class AdhocMetricEditPopoverTitle extends React.Component {
   render() {
     const { adhocMetric, onChange } = this.props;
 
-    const editPrompt = <Tooltip id="edit-metric-label-tooltip">Click to edit label</Tooltip>;
+    const editPrompt = (
+      <Tooltip id="edit-metric-label-tooltip">Click to edit label</Tooltip>
+    );
 
     return (
       <OverlayTrigger
@@ -57,7 +77,7 @@ export default class AdhocMetricEditPopoverTitle extends React.Component {
         onClick={this.onClick}
         onBlur={this.onBlur}
       >
-        {this.state.isEditable ?
+        {this.state.isEditable ? (
           <FormControl
             className="metric-edit-popover-label-input"
             type="text"
@@ -65,13 +85,17 @@ export default class AdhocMetricEditPopoverTitle extends React.Component {
             value={adhocMetric.hasCustomLabel ? adhocMetric.label : ''}
             onChange={onChange}
             inputRef={this.refFunc}
-          /> :
+          />
+        ) : (
           <span>
             {adhocMetric.hasCustomLabel ? adhocMetric.label : 'My Metric'}
             &nbsp;
-            <i className="fa fa-pencil" style={{ color: this.state.isHovered ? 'black' : 'grey' }} />
+            <i
+              className="fa fa-pencil"
+              style={{ color: this.state.isHovered ? 'black' : 'grey' }}
+            />
           </span>
-        }
+        )}
       </OverlayTrigger>
     );
   }

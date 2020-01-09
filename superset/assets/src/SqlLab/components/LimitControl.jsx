@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 import React from 'react';
 import PropTypes from 'prop-types';
 import {
@@ -24,7 +42,7 @@ export default class LimitControl extends React.PureComponent {
     super(props);
     const { value, defaultQueryLimit } = props;
     this.state = {
-      textValue: value.toString() || defaultQueryLimit.toString(),
+      textValue: (value || defaultQueryLimit).toString(),
       showOverlay: false,
     };
     this.handleHide = this.handleHide.bind(this);
@@ -37,14 +55,19 @@ export default class LimitControl extends React.PureComponent {
   }
 
   submitAndClose() {
-    const value = parseInt(this.state.textValue, 10) || this.props.defaultQueryLimit;
+    const value =
+      parseInt(this.state.textValue, 10) || this.props.defaultQueryLimit;
     this.props.onChange(value);
     this.setState({ showOverlay: false });
   }
 
   isValidLimit(limit) {
-    const value =  parseInt(limit, 10);
-    return !(Number.isNaN(value) || value <= 0 || (this.props.maxRow && value > this.props.maxRow));
+    const value = parseInt(limit, 10);
+    return !(
+      Number.isNaN(value) ||
+      value <= 0 ||
+      (this.props.maxRow && value > this.props.maxRow)
+    );
   }
 
   handleToggle() {
@@ -58,8 +81,11 @@ export default class LimitControl extends React.PureComponent {
   renderPopover() {
     const textValue = this.state.textValue;
     const isValid = this.isValidLimit(textValue);
-    const errorMsg = 'Row limit must be positive integer' +
-      (this.props.maxRow ? ` and not greater than ${this.props.maxRow}` : '');
+    const errorMsg =
+      t('Row limit must be positive integer') +
+      (this.props.maxRow
+        ? t(' and not greater than %s', this.props.maxRow)
+        : '');
     return (
       <Popover id="sqllab-limit-results">
         <div style={{ width: '100px' }}>
@@ -89,7 +115,10 @@ export default class LimitControl extends React.PureComponent {
             <Button
               bsSize="small"
               className="float-right reset"
-              onClick={this.setValueAndClose.bind(this, this.props.defaultQueryLimit.toString())}
+              onClick={this.setValueAndClose.bind(
+                this,
+                this.props.defaultQueryLimit.toString(),
+              )}
             >
               Reset
             </Button>
@@ -102,10 +131,7 @@ export default class LimitControl extends React.PureComponent {
   render() {
     return (
       <div>
-        <Label
-          style={{ cursor: 'pointer' }}
-          onClick={this.handleToggle}
-        >
+        <Label style={{ cursor: 'pointer' }} onClick={this.handleToggle}>
           LIMIT {this.props.value || this.props.maxRow}
         </Label>
         <Overlay

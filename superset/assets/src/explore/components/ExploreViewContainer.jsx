@@ -1,8 +1,27 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 /* eslint camelcase: 0 */
 import React from 'react';
 import PropTypes from 'prop-types';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
+import { t } from '@superset-ui/translation';
 
 import ExploreChartPanel from './ExploreChartPanel';
 import ControlPanelsContainer from './ControlPanelsContainer';
@@ -10,12 +29,31 @@ import SaveModal from './SaveModal';
 import QueryAndSaveBtns from './QueryAndSaveBtns';
 import { getExploreUrlAndPayload, getExploreLongUrl } from '../exploreUtils';
 import { areObjectsEqual } from '../../reduxUtils';
-import { getFormDataFromControls } from '../store';
+import { getFormDataFromControls } from '../controlUtils';
 import { chartPropShape } from '../../dashboard/util/propShapes';
 import * as exploreActions from '../actions/exploreActions';
 import * as saveModalActions from '../actions/saveModalActions';
 import * as chartActions from '../../chart/chartAction';
-import { Logger, ActionLog, EXPLORE_EVENT_NAMES, LOG_ACTIONS_MOUNT_EXPLORER } from '../../logger';
+import { fetchDatasourceMetadata } from '../../dashboard/actions/datasources';
+import * as logActions from '../../logger/actions/';
+import {
+  LOG_ACTIONS_MOUNT_EXPLORER,
+  LOG_ACTIONS_CHANGE_EXPLORE_CONTROLS,
+} from '../../logger/LogUtils';
+import Hotkeys from '../../components/Hotkeys';
+
+// Prolly need to move this to a global context
+const keymap = {
+  RUN: 'ctrl + r, ctrl + enter',
+  SAVE: 'ctrl + s',
+};
+
+const getHotKeys = () =>
+  Object.keys(keymap).map(k => ({
+    name: k,
+    descr: keymap[k],
+    key: k,
+  }));
 
 const propTypes = {
   actions: PropTypes.object.isRequired,
@@ -34,13 +72,6 @@ const propTypes = {
 class ExploreViewContainer extends React.Component {
   constructor(props) {
     super(props);
-    this.loadingLog = new ActionLog({
-      impressionId: props.impressionId,
-      source: 'slice',
-      sourceId: props.slice ? props.slice.slice_id : 0,
-      eventNames: EXPLORE_EVENT_NAMES,
-    });
-    Logger.start(this.loadingLog);
 
     this.state = {
       height: this.getHeight(),
@@ -56,53 +87,67 @@ class ExploreViewContainer extends React.Component {
     this.onStop = this.onStop.bind(this);
     this.onQuery = this.onQuery.bind(this);
     this.toggleModal = this.toggleModal.bind(this);
+    this.handleKeydown = this.handleKeydown.bind(this);
   }
 
   componentDidMount() {
     window.addEventListener('resize', this.handleResize);
     window.addEventListener('popstate', this.handlePopstate);
+    document.addEventListener('keydown', this.handleKeydown);
     this.addHistory({ isReplace: true });
-    Logger.append(LOG_ACTIONS_MOUNT_EXPLORER);
+    this.props.actions.logEvent(LOG_ACTIONS_MOUNT_EXPLORER);
+
+    // Trigger the chart if there are no errors
+    const { chart } = this.props;
+    if (!this.hasErrors()) {
+      this.props.actions.triggerQuery(true, this.props.chart.id);
+    }
   }
 
-  componentWillReceiveProps(nextProps) {
-    const wasRendered =
-      ['rendered', 'failed', 'stopped'].indexOf(this.props.chart.chartStatus) > -1;
-    const isRendered = ['rendered', 'failed', 'stopped'].indexOf(nextProps.chart.chartStatus) > -1;
-    if (!wasRendered && isRendered) {
-      Logger.send(this.loadingLog);
-    }
-    if (nextProps.controls.viz_type.value !== this.props.controls.viz_type.value) {
+  UNSAFE_componentWillReceiveProps(nextProps) {
+    if (
+      nextProps.controls.viz_type.value !== this.props.controls.viz_type.value
+    ) {
       this.props.actions.resetControls();
-      this.props.actions.triggerQuery(true, this.props.chart.id);
     }
     if (
       nextProps.controls.datasource &&
       (this.props.controls.datasource == null ||
-        nextProps.controls.datasource.value !== this.props.controls.datasource.value)
+        nextProps.controls.datasource.value !==
+          this.props.controls.datasource.value)
     ) {
-      this.props.actions.fetchDatasourceMetadata(nextProps.form_data.datasource, true);
+      fetchDatasourceMetadata(nextProps.form_data.datasource, true);
     }
 
-    const changedControlKeys = this.findChangedControlKeys(this.props.controls, nextProps.controls);
+    const changedControlKeys = this.findChangedControlKeys(
+      this.props.controls,
+      nextProps.controls,
+    );
     if (this.hasDisplayControlChanged(changedControlKeys, nextProps.controls)) {
       this.props.actions.updateQueryFormData(
         getFormDataFromControls(nextProps.controls),
         this.props.chart.id,
       );
-      this.props.actions.renderTriggered(new Date().getTime(), this.props.chart.id);
+      this.props.actions.renderTriggered(
+        new Date().getTime(),
+        this.props.chart.id,
+      );
     }
     if (this.hasQueryControlChanged(changedControlKeys, nextProps.controls)) {
+      this.props.actions.logEvent(LOG_ACTIONS_CHANGE_EXPLORE_CONTROLS);
       this.setState({ chartIsStale: true, refreshOverlayVisible: true });
     }
   }
 
   /* eslint no-unused-vars: 0 */
   componentDidUpdate(prevProps, prevState) {
-    this.triggerQueryIfNeeded();
-
-    const changedControlKeys = this.findChangedControlKeys(prevProps.controls, this.props.controls);
-    if (this.hasDisplayControlChanged(changedControlKeys, this.props.controls)) {
+    const changedControlKeys = this.findChangedControlKeys(
+      prevProps.controls,
+      this.props.controls,
+    );
+    if (
+      this.hasDisplayControlChanged(changedControlKeys, this.props.controls)
+    ) {
       this.addHistory({});
     }
   }
@@ -110,6 +155,7 @@ class ExploreViewContainer extends React.Component {
   componentWillUnmount() {
     window.removeEventListener('resize', this.handleResize);
     window.removeEventListener('popstate', this.handlePopstate);
+    document.removeEventListener('keydown', this.handleKeydown);
   }
 
   onQuery() {
@@ -119,10 +165,6 @@ class ExploreViewContainer extends React.Component {
 
     this.setState({ chartIsStale: false, refreshOverlayVisible: false });
     this.addHistory({});
-  }
-
-  onDismissRefreshOverlay() {
-    this.setState({ refreshOverlayVisible: false });
   }
 
   onStop() {
@@ -143,6 +185,31 @@ class ExploreViewContainer extends React.Component {
     return `${window.innerHeight - navHeight}px`;
   }
 
+  handleKeydown(event) {
+    const controlOrCommand = event.ctrlKey || event.metaKey;
+    if (controlOrCommand) {
+      const isEnter = event.key === 'Enter' || event.keyCode === 13;
+      const isS = event.key === 's' || event.keyCode === 83;
+      if (isEnter) {
+        this.onQuery();
+      } else if (isS) {
+        if (this.props.slice) {
+          this.props.actions
+            .saveSlice(this.props.form_data, {
+              action: 'overwrite',
+              slice_id: this.props.slice.slice_id,
+              slice_name: this.props.slice.slice_name,
+              add_to_dash: 'noSave',
+              goto_dash: false,
+            })
+            .then(({ data }) => {
+              window.location = data.slice.slice_url;
+            });
+        }
+      }
+    }
+  }
+
   findChangedControlKeys(prevControls, currentControls) {
     return Object.keys(currentControls).filter(
       key =>
@@ -157,24 +224,17 @@ class ExploreViewContainer extends React.Component {
 
   hasQueryControlChanged(changedControlKeys, currentControls) {
     return changedControlKeys.some(
-      key => !currentControls[key].renderTrigger && !currentControls[key].dontRefreshOnChange,
+      key =>
+        !currentControls[key].renderTrigger &&
+        !currentControls[key].dontRefreshOnChange,
     );
   }
 
-  triggerQueryIfNeeded() {
-    if (this.props.chart.triggerQuery && !this.hasErrors()) {
-      this.props.actions.runQuery(
-        this.props.form_data,
-        false,
-        this.props.timeout,
-        this.props.chart.id,
-      );
-    }
-  }
-
   addHistory({ isReplace = false, title }) {
-    const { payload } = getExploreUrlAndPayload({ formData: this.props.form_data });
-    const longUrl = getExploreLongUrl(this.props.form_data);
+    const { payload } = getExploreUrlAndPayload({
+      formData: this.props.form_data,
+    });
+    const longUrl = getExploreLongUrl(this.props.form_data, null, false);
     try {
       if (isReplace) {
         history.replaceState(payload, title, longUrl);
@@ -183,7 +243,12 @@ class ExploreViewContainer extends React.Component {
       }
     } catch (e) {
       // eslint-disable-next-line no-console
-      console.warn('Failed at altering browser history', payload, title, longUrl);
+      console.warn(
+        'Failed at altering browser history',
+        payload,
+        title,
+        longUrl,
+      );
     }
 
     // it seems some browsers don't support pushState title attribute
@@ -203,7 +268,12 @@ class ExploreViewContainer extends React.Component {
     const formData = history.state;
     if (formData && Object.keys(formData).length) {
       this.props.actions.setExploreControls(formData);
-      this.props.actions.runQuery(formData, false, this.props.timeout, this.props.chart.id);
+      this.props.actions.postChartFormData(
+        formData,
+        false,
+        this.props.timeout,
+        this.props.chart.id,
+      );
     }
   }
 
@@ -219,12 +289,14 @@ class ExploreViewContainer extends React.Component {
   renderErrorMessage() {
     // Returns an error message as a node if any errors are in the store
     const errors = [];
+    const ctrls = this.props.controls;
     for (const controlName in this.props.controls) {
       const control = this.props.controls[controlName];
       if (control.validationErrors && control.validationErrors.length > 0) {
         errors.push(
           <div key={controlName}>
-            <strong>{`[ ${control.label} ] `}</strong>
+            {t('Control labeled ')}
+            <strong>{` "${control.label}" `}</strong>
             {control.validationErrors.join('. ')}
           </div>,
         );
@@ -246,7 +318,6 @@ class ExploreViewContainer extends React.Component {
         refreshOverlayVisible={this.state.refreshOverlayVisible}
         addHistory={this.addHistory}
         onQuery={this.onQuery.bind(this)}
-        onDismissRefreshOverlay={this.onDismissRefreshOverlay.bind(this)}
       />
     );
   }
@@ -259,10 +330,7 @@ class ExploreViewContainer extends React.Component {
       <div
         id="explore-container"
         className="container-fluid"
-        style={{
-          height: this.state.height,
-          overflow: 'hidden',
-        }}
+        style={{ height: this.state.height, overflow: 'hidden' }}
       >
         {this.state.showModal && (
           <SaveModal
@@ -273,16 +341,31 @@ class ExploreViewContainer extends React.Component {
         )}
         <div className="row">
           <div className="col-sm-4">
-            <QueryAndSaveBtns
-              canAdd="True"
-              onQuery={this.onQuery}
-              onSave={this.toggleModal}
-              onStop={this.onStop}
-              loading={this.props.chart.chartStatus === 'loading'}
-              chartIsStale={this.state.chartIsStale}
-              errorMessage={this.renderErrorMessage()}
-              datasourceType={this.props.datasource_type}
-            />
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}
+            >
+              <QueryAndSaveBtns
+                canAdd="True"
+                onQuery={this.onQuery}
+                onSave={this.toggleModal}
+                onStop={this.onStop}
+                loading={this.props.chart.chartStatus === 'loading'}
+                chartIsStale={this.state.chartIsStale}
+                errorMessage={this.renderErrorMessage()}
+                datasourceType={this.props.datasource_type}
+              />
+              <div className="m-l-5 text-muted">
+                <Hotkeys
+                  header="Keyboard shortcuts"
+                  hotkeys={getHotKeys()}
+                  placement="right"
+                />
+              </div>
+            </div>
             <br />
             <ControlPanelsContainer
               actions={this.props.actions}
@@ -314,10 +397,15 @@ function mapStateToProps(state) {
     controls: explore.controls,
     can_overwrite: !!explore.can_overwrite,
     can_download: !!explore.can_download,
-    column_formats: explore.datasource ? explore.datasource.column_formats : null,
-    containerId: explore.slice ? `slice-container-${explore.slice.slice_id}` : 'slice-container',
+    column_formats: explore.datasource
+      ? explore.datasource.column_formats
+      : null,
+    containerId: explore.slice
+      ? `slice-container-${explore.slice.slice_id}`
+      : 'slice-container',
     isStarred: explore.isStarred,
     slice: explore.slice,
+    triggerRender: explore.triggerRender,
     form_data,
     table_name: form_data.datasource_name,
     vizType: form_data.viz_type,
@@ -330,11 +418,20 @@ function mapStateToProps(state) {
 }
 
 function mapDispatchToProps(dispatch) {
-  const actions = Object.assign({}, exploreActions, saveModalActions, chartActions);
+  const actions = Object.assign(
+    {},
+    exploreActions,
+    saveModalActions,
+    chartActions,
+    logActions,
+  );
   return {
     actions: bindActionCreators(actions, dispatch),
   };
 }
 
 export { ExploreViewContainer };
-export default connect(mapStateToProps, mapDispatchToProps)(ExploreViewContainer);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(ExploreViewContainer);

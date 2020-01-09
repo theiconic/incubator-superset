@@ -1,6 +1,29 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 import React from 'react';
 import PropTypes from 'prop-types';
-import { OverlayTrigger, Popover, ListGroup, ListGroupItem } from 'react-bootstrap';
+import {
+  OverlayTrigger,
+  Popover,
+  ListGroup,
+  ListGroupItem,
+} from 'react-bootstrap';
 import { connect } from 'react-redux';
 import { t } from '@superset-ui/translation';
 import { getChartKey } from '../../exploreUtils';
@@ -38,10 +61,14 @@ class AnnotationLayerControl extends React.PureComponent {
     this.removeAnnotationLayer = this.removeAnnotationLayer.bind(this);
   }
 
-  componentWillReceiveProps(nextProps) {
+  UNSAFE_componentWillReceiveProps(nextProps) {
     const { name, annotationError, validationErrors, value } = nextProps;
     if (Object.keys(annotationError).length && !validationErrors.length) {
-      this.props.actions.setControlValue(name, value, Object.keys(annotationError));
+      this.props.actions.setControlValue(
+        name,
+        value,
+        Object.keys(annotationError),
+      );
     }
     if (!Object.keys(annotationError).length && validationErrors.length) {
       this.props.actions.setControlValue(name, value, []);
@@ -51,7 +78,9 @@ class AnnotationLayerControl extends React.PureComponent {
   addAnnotationLayer(annotationLayer) {
     const annotation = annotationLayer;
     let annotations = this.props.value.slice();
-    const i = annotations.findIndex(x => x.name === (annotation.oldName || annotation.name));
+    const i = annotations.findIndex(
+      x => x.name === (annotation.oldName || annotation.name),
+    );
     delete annotation.oldName;
     if (i > -1) {
       annotations[i] = annotation;
@@ -63,7 +92,8 @@ class AnnotationLayerControl extends React.PureComponent {
   }
 
   removeAnnotationLayer(annotation) {
-    const annotations = this.props.value.slice()
+    const annotations = this.props.value
+      .slice()
       .filter(x => x.name !== annotation.oldName);
     this.props.onChange(annotations);
   }
@@ -73,7 +103,9 @@ class AnnotationLayerControl extends React.PureComponent {
     return (
       <Popover
         style={{ maxWidth: 'none' }}
-        title={annotation ? t('Edit Annotation Layer') : t('Add Annotation Layer')}
+        title={
+          annotation ? t('Edit Annotation Layer') : t('Add Annotation Layer')
+        }
         id={`annotation-pop-${id}`}
       >
         <AnnotationLayer
@@ -119,14 +151,15 @@ class AnnotationLayerControl extends React.PureComponent {
         rootClose
         ref={`overlay-${i}`}
         placement="right"
-        overlay={this.renderPopover(`overlay-${i}`, anno,
-          this.props.annotationError[anno.name])}
+        overlay={this.renderPopover(
+          `overlay-${i}`,
+          anno,
+          this.props.annotationError[anno.name],
+        )}
       >
         <ListGroupItem>
           <span>{anno.name}</span>
-          <span style={{ float: 'right' }}>
-            {this.renderInfo(anno)}
-          </span>
+          <span style={{ float: 'right' }}>{this.renderInfo(anno)}</span>
         </ListGroupItem>
       </OverlayTrigger>
     ));
@@ -158,18 +191,24 @@ AnnotationLayerControl.defaultProps = defaultProps;
 // directly, could not figure out how to get access to the color_scheme
 function mapStateToProps({ charts, explore }) {
   const chartKey = getChartKey(explore);
+  const chart = charts[chartKey] || charts[0] || {};
+
   return {
     colorScheme: (explore.controls || {}).color_scheme.value,
-    annotationError: charts[chartKey].annotationError,
-    annotationQuery: charts[chartKey].annotationQuery,
+    annotationError: chart.annotationError,
+    annotationQuery: chart.annotationQuery,
     vizType: explore.controls.viz_type.value,
   };
 }
 
 function mapDispatchToProps(dispatch) {
   return {
-    refreshAnnotationData: annotationLayer => dispatch(runAnnotationQuery(annotationLayer)),
+    refreshAnnotationData: annotationLayer =>
+      dispatch(runAnnotationQuery(annotationLayer)),
   };
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(AnnotationLayerControl);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(AnnotationLayerControl);

@@ -1,7 +1,25 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 import React from 'react';
 import PropTypes from 'prop-types';
 import moment from 'moment';
-import { Table } from 'reactable';
+import { Table } from 'reactable-arc';
 import { Label, ProgressBar, Well } from 'react-bootstrap';
 import { t } from '@superset-ui/translation';
 
@@ -19,6 +37,7 @@ const propTypes = {
   queries: PropTypes.array,
   onUserClicked: PropTypes.func,
   onDbClicked: PropTypes.func,
+  displayLimit: PropTypes.number.isRequired,
 };
 const defaultProps = {
   columns: ['started', 'duration', 'rows'],
@@ -61,10 +80,10 @@ class QueryTable extends React.PureComponent {
   }
 
   openQueryInNewTab(query) {
-    this.props.actions.cloneQueryToNewTab(query);
+    this.props.actions.cloneQueryToNewTab(query, true);
   }
-  openAsyncResults(query) {
-    this.props.actions.fetchQueryResults(query);
+  openAsyncResults(query, displayLimit) {
+    this.props.actions.fetchQueryResults(query, displayLimit);
   }
   clearQueryResults(query) {
     this.props.actions.clearQueryResults(query);
@@ -74,7 +93,7 @@ class QueryTable extends React.PureComponent {
   }
   render() {
     const data = this.props.queries
-      .map((query) => {
+      .map(query => {
         const q = Object.assign({}, query);
         if (q.endDttm) {
           q.duration = fDuration(q.startDttm, q.endDttm);
@@ -119,7 +138,12 @@ class QueryTable extends React.PureComponent {
         );
         q.sql = (
           <Well>
-            <HighlightedSql sql={q.sql} rawSql={q.executedSql} shrink maxWidth={60} />
+            <HighlightedSql
+              sql={q.sql}
+              rawSql={q.executedSql}
+              shrink
+              maxWidth={60}
+            />
           </Well>
         );
         if (q.resultsKey) {
@@ -133,17 +157,28 @@ class QueryTable extends React.PureComponent {
                 </Label>
               }
               modalTitle={t('Data preview')}
-              beforeOpen={this.openAsyncResults.bind(this, query)}
+              beforeOpen={this.openAsyncResults.bind(
+                this,
+                query,
+                this.props.displayLimit,
+              )}
               onExit={this.clearQueryResults.bind(this, query)}
               modalBody={
-                <ResultSet showSql query={query} actions={this.props.actions} height={400} />
+                <ResultSet
+                  showSql
+                  query={query}
+                  actions={this.props.actions}
+                  height={400}
+                  displayLimit={this.props.displayLimit}
+                />
               }
             />
           );
         } else {
           // if query was run using ctas and force_ctas_schema was set
           // tempTable will have the schema
-          const schemaUsed = q.ctas && q.tempTable && q.tempTable.includes('.') ? '' : q.schema;
+          const schemaUsed =
+            q.ctas && q.tempTable && q.tempTable.includes('.') ? '' : q.schema;
           q.output = [schemaUsed, q.tempTable].filter(v => v).join('.');
         }
         q.progress = (
@@ -151,7 +186,7 @@ class QueryTable extends React.PureComponent {
             style={{ width: '75px' }}
             striped
             now={q.progress}
-            label={`${q.progress}%`}
+            label={`${q.progress.toFixed(0)}%`}
           />
         );
         let errorTooltip;
@@ -173,7 +208,9 @@ class QueryTable extends React.PureComponent {
             <Link
               className="fa fa-pencil m-r-3"
               onClick={this.restoreSql.bind(this, query)}
-              tooltip={t('Overwrite text in the editor with a query on this table')}
+              tooltip={t(
+                'Overwrite text in the editor with a query on this table',
+              )}
               placement="top"
             />
             <Link
