@@ -1,0 +1,254 @@
+<html>
+
+<head>
+    <title>Dashboards @ THE ICONIC</title>
+    <link rel="stylesheet" type="text/css" href="/static/assets/dist/bootstrap.min.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="/static/assets/dist/custom.css" media="screen">
+    <link rel="shortcut icon" type="image/x-icon" href="/static/assets/dist/favicon.png"/>
+</head>
+
+<!--/static/assets/dist/-->
+
+<body>
+
+<div class="card text-center">
+    <div class="card-body">
+
+        <ul class="header-side-nav">
+            <li>
+                <h3> Welcome to Dashboards @ THE ICONIC </h3>
+            </li>
+        </ul>
+
+        <ul class="pull-right header-side-nav">
+            <li>
+                <a class="btn btn-sm btn-sub-categories">
+                    Hello, {{ current_user.first_name }}
+                </a>
+            </li>
+            <li>
+                <a href="/superset/dashboard/usage_guide/" class="btn btn-sm btn-sub-categories">
+                    Usage Guide
+                </a>
+            </li>
+            <li>
+                <a href="/superset/profile/{{ current_user.username }}/" class="btn btn-sm btn-sub-categories">
+                    Favourites
+                </a>
+            </li>
+            <li>
+                <a href="/logout" class="btn btn-sm btn-sub-categories">
+                    Log Out
+                </a>
+            </li>
+        </ul>
+
+    </div>
+</div>
+<br>
+<!--<div class="card text-center">
+  <div class="card-body">
+    <h5 class="card-title">Welcome to Dashboards @ THE ICONIC</h5>
+    <p class="card-text">Click on a section below to find relevant dashbaords for your needs</p>
+    <a href="/superset/dashboard/usage_guide/" class="btn btn-primary">Usage Guide</a>
+  </div>
+</div>-->
+<!--<div class="card-header">-->
+<!--Hello, {{ current_user.first_name }} !-->
+<!--</div>-->
+
+<div class="container">
+
+    <div class="row">
+
+         <a href="/dashboard/list/?_flt_0_dashboard_title=CM&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+           class="card-wrapper  col-xs-12 col-sm-6 col-md-6 col-lg-3">
+            <div class="card card-dashboard cm">
+                <div class="card-body">
+                    <h5 class="card-title">Category Management</h5>
+                    <p class="card-text">Everything about Brands, Buying and Planning</p>
+
+                </div>
+            </div>
+        </a>
+
+        <a href="/dashboard/list/?_flt_0_dashboard_title=CS&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+           class="card-wrapper  col-xs-12 col-sm-6 col-md-6 col-lg-3">
+            <div class="card card-dashboard cs">
+                <div class="card-body">
+                    <h5 class="card-title">Customer Service</h5>
+                    <p class="card-text">Everything related to Customer Service and Call Centers</p>
+
+                </div>
+            </div>
+        </a>
+
+        <a href="/dashboard/list/?_flt_0_dashboard_title=FN&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+           class="card-wrapper  col-xs-12 col-sm-6 col-md-6 col-lg-3">
+            <div class="card card-dashboard cs">
+                <div class="card-body">
+                    <h5 class="card-title">Finance</h5>
+                    <p class="card-text">Everything about Finance, Money and Profits</p>
+
+                </div>
+            </div>
+        </a>
+
+        <div class="card-wrapper  col-xs-12 col-sm-6 col-md-6 col-lg-3">
+            <div class="card card-dashboard fc">
+                <div class="card-body">
+                    <h5 class="card-title">Fulfilment Center</h5>
+                    <p class="card-text">Everything about the FC, ASRS and Stock</p>
+                    <a href="/dashboard/list/?_flt_0_dashboard_title=FC-ADM&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+                       class="btn btn-sm btn-sub-categories">
+                        Admin
+                    </a>
+                    <a href="/dashboard/list/?_flt_0_dashboard_title=FC-INB&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+                       class="btn btn-sm btn-sub-categories">
+                        Inbound
+                    </a>
+                    <a href="/dashboard/list/?_flt_0_dashboard_title=FC-INV&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+                       class="btn btn-sm btn-sub-categories">
+                        Inventory
+                    </a>
+                    <a href="/dashboard/list/?_flt_0_dashboard_title=FC-LOG&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+                       class="btn btn-sm btn-sub-categories">
+                        Logistics
+                    </a>
+                    <a href="/dashboard/list/?_flt_0_dashboard_title=FC-OUT&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+                       class="btn btn-sm btn-sub-categories">
+                        Outbound
+                    </a>
+                    <a href="/dashboard/list/?_flt_0_dashboard_title=FC-PIC&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+                       class="btn btn-sm btn-sub-categories">
+                        Picking
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <a href="/dashboard/list/?_flt_0_dashboard_title=EX&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+           class="card-wrapper  col-xs-12 col-sm-6 col-md-6 col-lg-3">
+            <div class="card card-dashboard ex">
+                <div class="card-body">
+                    <h5 class="card-title">Company Reports</h5>
+                    <p class="card-text">Key company reports - NPS, Management Reports</p>
+
+                </div>
+            </div>
+        </a>
+
+        <div class="card-wrapper col-xs-12 col-sm-6 col-md-6 col-lg-3">
+            <div class="card card-dashboard marketing">
+                <div class="card-body">
+                    <h5 class="card-title">Marketing</h5>
+                    <p class="card-text">Everything related to channels, customers, CRM</p>
+                    <a href="/dashboard/list/?_flt_0_dashboard_title=MK&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+                       class="btn btn-sm btn-sub-categories">
+                        All
+                    </a>
+                    <a href="/dashboard/list/?_flt_0_dashboard_title=MK-O&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+                       class="btn btn-sm btn-sub-categories">
+                        Channels
+                    </a>
+                    <a href="/dashboard/list/?_flt_0_dashboard_title=MK-T&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+                       class="btn btn-sm btn-sub-categories">
+                        Trade
+                    </a>
+                    <a href="/dashboard/list/?_flt_0_dashboard_title=MK-C&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+                       class="btn btn-sm btn-sub-categories">
+                        CRM
+                    </a>
+                    <a href="/dashboard/list/?_flt_0_dashboard_title=MK-P&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+                       class="btn btn-sm btn-sub-categories">
+                        Creative
+                    </a>
+                    <a href="/dashboard/list/?_flt_0_dashboard_title=MK-M&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+                       class="btn btn-sm btn-sub-categories">
+                        Merchandise
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <a href="/dashboard/list/?_flt_0_dashboard_title=MP&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+           class="card-wrapper  col-xs-12 col-sm-6 col-md-6 col-lg-3">
+            <div class="card card-dashboard mp">
+                <div class="card-body">
+                    <h5 class="card-title">Marketplace</h5>
+                    <p class="card-text">Everything related to the marketplace team</p>
+
+                </div>
+            </div>
+        </a>
+
+        <a href="/dashboard/list/?_flt_0_dashboard_title=PC&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+           class="card-wrapper  col-xs-12 col-sm-6 col-md-6 col-lg-3">
+            <div class="card card-dashboard pc">
+                <div class="card-body">
+                    <h5 class="card-title">People and Culture</h5>
+                    <p class="card-text">Everything about the People, Culture and Fun</p>
+
+                </div>
+            </div>
+        </a>
+
+        <a href="/dashboard/list/?_flt_0_dashboard_title=PD&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+           class="card-wrapper  col-xs-12 col-sm-6 col-md-6 col-lg-3">
+            <div class="card card-dashboard production">
+                <div class="card-body">
+                    <h5 class="card-title">Production</h5>
+                    <p class="card-text">Everything about Production, Creative and TTL</p>
+
+                </div>
+            </div>
+        </a>
+
+        <a href="/dashboard/list/?_flt_0_dashboard_title=TE&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+           class="card-wrapper  col-xs-12 col-sm-6 col-md-6 col-lg-3">
+            <div class="card card-dashboard cp">
+                <div class="card-body">
+                    <h5 class="card-title">Tech & Product</h5>
+                    <p class="card-text">Everything related to website, apps and features</p>
+
+                </div>
+            </div>
+        </a>
+
+        <a href="/dashboard/list/?_flt_0_dashboard_title=VM&_oc_DashboardModelView=dashboard_title&_od_DashboardModelView=asc"
+           class="card-wrapper  col-xs-12 col-sm-6 col-md-6 col-lg-3">
+            <div class="card card-dashboard vm">
+                <div class="card-body">
+                    <h5 class="card-title">Vendor Management</h5>
+                    <p class="card-text">Everything about Vendors, Suppliers and Shipments</p>
+
+                </div>
+            </div>
+        </a>
+
+        <div class="card-wrapper col-xs-12 col-sm-6 col-md-6 col-lg-3">
+            <div class="card card-dashboard dyi">
+                <div class="card-body">
+                    <h5 class="card-title">Build your Own</h5>
+                    <p class="card-text">For Those Who Like to Build Their Own</p>
+                    <a href="/chart/add" class="btn btn-sm btn-sub-categories">
+                        Start Analysis
+                    </a>
+                    <a href="/superset/sqllab" class="btn btn-sm btn-sub-categories">
+                        Write SQL
+                    </a>
+                    <a href="/dashboard/list/" class="btn btn-sm btn-sub-categories">
+                        Search All
+                    </a>
+                    <a href="/dashboard/list/?_flt_0_owners={{ current_user.id }}&_oc_DashboardModelView=modified&_od_DashboardModelView=desc" class="btn btn-sm btn-sub-categories">
+                        My Work
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>

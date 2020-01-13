@@ -1,0 +1,149 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: ${APP_NAME}
+  labels:
+    app: ${APP_NAME}
+spec:
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 2
+      maxSurge: 2
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: ${APP_NAME}
+    spec:
+      containers:
+      - name: ${APP_NAME}
+        image: ${APP_IMAGE}
+        command: ["sh", "/usr/local/bin/start_webserver.sh"]
+        envFrom:
+          - configMapRef:
+              name: ${APP_NAME}-environment
+        imagePullPolicy: Always
+        ports:
+          - name: http
+            containerPort: 8088
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "6Gi"
+          requests:
+            cpu: "1000m"
+            memory: "6Gi"
+      - name: ${APP_NAME}-nginx
+        image: ${APP_IMAGE_NGINX}
+        ports:
+          - name: https
+            containerPort: 443
+        resources:
+          limits:
+            cpu: "250m"
+            memory: "128Mi"
+          requests:
+            cpu: "250m"
+            memory: "128Mi"
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: ${APP_NAME}-monitoring
+  labels:
+    app: ${APP_NAME}-monitoring
+spec:
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: ${APP_NAME}-monitoring
+    spec:
+      containers:
+      - name: ${APP_NAME}-monitoring
+        image: ${APP_IMAGE}
+        command: ["sh", "/usr/local/bin/start_monitoring.sh"]
+        envFrom:
+          - configMapRef:
+              name: ${APP_NAME}-environment
+        imagePullPolicy: Always
+        ports:
+          - name: http
+            containerPort: 5555
+        resources:
+          limits:
+            cpu: "200m"
+            memory: "256Mi"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: ${APP_NAME}-worker
+  labels:
+    app: ${APP_NAME}-worker
+spec:
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: ${APP_NAME}-worker
+    spec:
+      containers:
+      - name: ${APP_NAME}-worker
+        image: ${APP_IMAGE}
+        command: ["sh", "/usr/local/bin/start_worker.sh"]
+        envFrom:
+          - configMapRef:
+              name: ${APP_NAME}-environment
+        imagePullPolicy: Always
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "3Gi"
+          requests:
+            cpu: "1000m"
+            memory: "3Gi"
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: ${APP_NAME}-scheduler
+  labels:
+    app: ${APP_NAME}-scheduler
+spec:
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: ${APP_NAME}-scheduler
+    spec:
+      containers:
+      - name: ${APP_NAME}-scheduler
+        image: ${APP_IMAGE}
+        command: ["sh", "/usr/local/bin/start_scheduler.sh"]
+        envFrom:
+          - configMapRef:
+              name: ${APP_NAME}-environment
+        imagePullPolicy: Always
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+          requests:
+            cpu: "1000m"
+            memory: "1Gi"

@@ -1,0 +1,4 @@
+FROM nginx:1.15
+
+COPY .cicd/docker/superset/files/live/redirect.conf /etc/nginx/conf.d/
+COPY .cicd/docker/superset/files/live/etc/nginx/conf.d/default.conf /etc/nginx/conf.d/

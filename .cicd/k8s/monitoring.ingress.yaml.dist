@@ -1,0 +1,19 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ${APP_NAME}-monitoring
+  annotations:
+    kubernetes.io/ingress.class: internal-nginx
+    kubernetes.io/tls-acme: "true"
+spec:
+  tls:
+  - hosts:
+    - monitoring-${SERVICE_URL}
+    secretName: ${APP_NAME}-monitoring-certificate
+  rules:
+  - host: monitoring-${SERVICE_URL}
+    http:
+      paths:
+      - backend:
+          serviceName: ${APP_NAME}-monitoring
+          servicePort: 443
