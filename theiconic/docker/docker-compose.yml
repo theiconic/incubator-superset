@@ -27,7 +27,8 @@ services:
       - .env
     stdin_open: true
     volumes:
-      - ./superset/files/local/superset_config.py:/home/superset/theiconic-superset/superset/superset_config.py
+      - ./superset/files/local/superset_config.py:/home/superset/superset_config.py
+      - ./superset/views/:/home/superset/views/
     depends_on:
       - mysql
       - redis

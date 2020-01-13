@@ -2,7 +2,7 @@
 
 set -ex
 
-export SUPERSET_CONFIG_PATH=$HOME/$SUPERSET_DIR/superset/superset_config.py
+export SUPERSET_CONFIG_PATH=$HOME/superset_config.py
 
 # If environment is local then setup default user
 
