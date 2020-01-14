@@ -18,8 +18,13 @@
 set -ex
 
 # Create an admin user (you will be prompted to set username, first and last name before setting a password)
-export FLASK_APP=superset:app
-flask fab create-admin
+export FLASK_APP=superset
+flask fab create-admin  \
+              --username admin \
+              --firstname Superset \
+              --lastname Admin \
+              --email data_platforms@theiconic.com.au \
+              --password admin
 
 if [ "$SUPERSET_LOAD_EXAMPLES" = "yes" ]; then
     # Load some data to play with

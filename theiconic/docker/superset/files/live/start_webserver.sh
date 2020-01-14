@@ -2,7 +2,7 @@
 
 set -ex
 
-export SUPERSET_CONFIG_PATH=$HOME/$SUPERSET_DIR/superset/superset_config.py
+export SUPERSET_CONFIG_PATH=$HOME/superset/superset_config.py
 
 # setup Google & Okta cred
 envsubst < "data_okta.json.dist" > "data_okta.json"
@@ -23,4 +23,4 @@ exec gunicorn --bind  0.0.0.0:8088 \
         --timeout $SUPERSET_GUNICORN_TIMEOUT \
         --limit-request-line 0 \
         --limit-request-field_size 0 \
-        superset:app
+        superset
