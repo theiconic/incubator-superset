@@ -1,0 +1,16 @@
+boto3
+pybigquery
+mysqlclient
+pymssql
+flask_oidc
+okta
+lxml
+bs4
+pyasn1
+pyldap
+psycopg2
+sqlalchemy-redshift
+snowflake-sqlalchemy
+flower
+gunicorn[gevent]
+s3cache
