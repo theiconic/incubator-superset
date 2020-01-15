@@ -44,7 +44,7 @@ RUN cd /app \
 
 
 # Copy and install TheIconic requirements files
-COPY ./theiconic/docker/requirements-ti.txt /app/
+COPY ./theiconic/requirements-ti.txt /app/
 RUN pip install --no-cache -r /app/requirements-ti.txt
 
 ######################################################################
