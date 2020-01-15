@@ -1,0 +1,127 @@
+#version: '3'
+#services:
+#  redis:
+#    image: redis
+#    container_name: superset-redis
+#    restart: always
+#    volumes:
+#      - redis:/data
+#  mysql:
+#    image: mysql:5.7.19
+#    container_name: superset-mysql
+#    restart: always
+#    environment:
+#      MYSQL_ROOT_PASSWORD: superset
+#      MYSQL_DATABASE: superset
+#      MYSQL_USER: superset
+#      MYSQL_PASSWORD: superset
+#  superset:
+#    container_name: superset
+#    image: superset:local
+#    build:
+#      context: ${PWD}
+#      dockerfile: superset/Dockerfile
+#    restart: always
+#    tty: true
+#    env_file:
+#      - .env
+#    stdin_open: true
+#    volumes:
+#      - ./superset/files/local/superset_config.py:/home/superset/superset_config.py
+#      - ./superset/views/:/home/superset/views/
+#    depends_on:
+#      - mysql
+#      - redis
+#    ports:
+#      - "8099:8088"
+#volumes:
+#  redis:
+
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+x-superset-build: &superset-build
+  context: ..
+  dockerfile: Dockerfile-latest
+  target: dev
+x-superset-depends-on: &superset-depends-on
+  - db
+  - redis
+x-superset-volumes: &superset-volumes
+  # /app/pythonpath_docker will be appended to the PYTHONPATH in the final container
+  - ./docker/docker-init.sh:/app/docker-init.sh
+  - ./docker/pythonpath_dev:/app/pythonpath
+  - ./superset:/app/superset
+  - superset_home:/app/superset_home
+
+version: "3.7"
+services:
+  redis:
+    image: redis:3.2
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis:/data
+
+  db:
+    env_file: docker/.env
+    image: mysql:5.7.19
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - db_home:/var/lib/mysql/data
+
+  superset:
+    build: *superset-build
+    command: ["flask", "run", "-p", "8088", "--with-threads", "--reload", "--debugger", "--host=0.0.0.0"]
+    env_file: docker/.env
+    restart: unless-stopped
+    ports:
+      - 8090:8088
+    depends_on: *superset-depends-on
+    volumes: *superset-volumes
+
+  superset-init:
+    build: *superset-build
+    command: ["/app/docker-init.sh"]
+    env_file: docker/.env
+    depends_on: *superset-depends-on
+    volumes: *superset-volumes
+
+  superset-node:
+    image: node:10-jessie
+    command: ["bash", "-c", "cd /app/superset/assets && npm install && npm run dev"]
+    env_file: docker/.env
+    depends_on: *superset-depends-on
+    volumes: *superset-volumes
+
+  superset-worker:
+    build: *superset-build
+    command: ["celery", "worker", "--app=superset.tasks.celery_app:app", "-Ofair"]
+    env_file: docker/.env
+    restart: unless-stopped
+    depends_on: *superset-depends-on
+    volumes: *superset-volumes
+
+volumes:
+  superset_home:
+    external: false
+  db_home:
+    external: false
+  redis:
+    external: false
