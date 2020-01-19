@@ -72,3 +72,9 @@ make superset-down
 Repo: [incubator-superset](https://github.com/theiconic/incubator-superset)
 Create a new branch from master then work on that branch to more features then open a PR.
 
+
+### Troubleshooting
+
+If your superset application is not going up try to check the containers logs using docker-compose logs -f. It will show if
+any dependent coontainer is dying due to bad configuration.
+
