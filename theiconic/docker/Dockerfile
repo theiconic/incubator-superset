@@ -123,6 +123,13 @@ RUN cd /app \
 
 COPY ./docker/docker-entrypoint.sh /usr/bin/
 
+####################################################################
+# Overwrite superset binaries with TheIconic versions
+####################################################################
+ARG TARGET_ENV=live
+COPY ./theiconic/superset/bin/ /usr/local/bin/
+RUN ln -sf /usr/local/bin/${TARGET_ENV}/* /usr/local/bin/
+
 WORKDIR /app
 
 USER root
@@ -143,4 +150,4 @@ COPY ./requirements-dev.txt ./docker/requirements-extra.txt /app/
 USER root
 RUN cd /app \
     && pip install --no-cache -r requirements-dev.txt -r requirements-extra.txt
-USER superset
+#USER superset
