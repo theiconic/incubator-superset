@@ -12,7 +12,7 @@ cicd::secrets_export "${APP_NAME}"
 
 # Prepare the database
 export DB_INSTANCE_SIZE="db.m4.large"
-export DB_STORAGE_SIZE=50
+export DB_STORAGE_SIZE=200
 export SUPERSET_ENV="staging"
 export REDIS_INSTANCE_SIZE="cache.m3.medium"
 
