@@ -12,7 +12,7 @@ cicd::secrets_export "${APP_NAME}"
 
 # Prepare the database
 export DB_INSTANCE_SIZE="db.m4.large"
-export DB_STORAGE_SIZE=200
+export DB_STORAGE_SIZE=50
 export SUPERSET_ENV="staging"
 export REDIS_INSTANCE_SIZE="cache.m3.medium"
 
@@ -27,10 +27,10 @@ export SUPERSET_DB_HOST="${APP_NAME}-${CICD_NAMESPACE}.mysql.${SERVICE_HOST}"
 
 # Prepare the scaling values
 export APPLICATION_MIN_REPLICAS=6
-[[ ${CICD_NAMESPACE} == 'live' ]] && APPLICATION_MIN_REPLICAS="6" || APPLICATION_MIN_REPLICAS="3"
+[[ ${CICD_NAMESPACE} == 'live' ]] && APPLICATION_MIN_REPLICAS="6" || APPLICATION_MIN_REPLICAS="1"
 
 export APPLICATION_MAX_REPLICAS
-[[ ${CICD_NAMESPACE} == 'live' ]] && APPLICATION_MAX_REPLICAS="10" || APPLICATION_MAX_REPLICAS="6"
+[[ ${CICD_NAMESPACE} == 'live' ]] && APPLICATION_MAX_REPLICAS="10" || APPLICATION_MAX_REPLICAS="1"
 
 # Get the New Relic App ID
 #NEWRELIC_API_URL="${bamboo_cicd_api_url}/v3/newrelic/application?environment=${NODE_ENV}&name=${SERVICE_URL}"

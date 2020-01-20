@@ -130,6 +130,8 @@ ARG TARGET_ENV=live
 COPY ./theiconic/superset/bin/ /usr/local/bin/
 RUN ln -sf /usr/local/bin/${TARGET_ENV}/* /usr/local/bin/
 
+COPY ./theiconic/superset/ ./app/superset/
+
 WORKDIR /app
 
 USER root
