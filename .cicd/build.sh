@@ -6,7 +6,7 @@ source <(curl "${bamboo_cicd_api_url}/v3/")
 APP_NAME="superset"
 
 DEFAULT_DOCKERFILES_PATH="${cicd_working_directory}/theiconic/docker"
-CONTEXT_PATH="${cicd_working_directory}/theiconic"
+CONTEXT_PATH="${cicd_working_directory}"
 
 export DOCKER_BUILDKIT=1 \
        BUILDKIT_PROGRESS=plain
