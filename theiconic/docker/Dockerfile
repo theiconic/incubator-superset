@@ -47,27 +47,6 @@ RUN cd /app \
 COPY ./theiconic/requirements-ti.txt /app/
 RUN pip install --no-cache -r /app/requirements-ti.txt
 
-######################################################################
-# Node stage to deal with static asset construction
-######################################################################
-FROM node:10-jessie AS superset-node
-
-# NPM ci first, as to NOT invalidate previous steps except for when package.json changes
-RUN mkdir -p /app/superset/assets
-#COPY ./superset/assets/package* /app/superset/assets/
-COPY ../superset/assets/package* /app/superset/assets/
-RUN cd /app/superset/assets \
-        && npm ci
-
-# Next, copy in the rest and let webpack do its thing
-#COPY ./superset/assets /app/superset/assets
-COPY ../superset/assets /app/superset/assets
-# This is BY FAR the most expensive step (thanks Terser!)
-RUN cd /app/superset/assets \
-        && npm run build \
-        && rm -rf node_modules
-
-
 #####################################################################
 # The 2 stages below are iconic dependencies to generate reports
 #####################################################################
@@ -83,6 +62,25 @@ RUN wget https://github.com/mozilla/geckodriver/releases/download/v0.24.0/geckod
     tar -xzf geckodriver-v0.24.0-linux64.tar.gz && \
     mv geckodriver /usr/local/bin/ && \
     rm geckodriver-v0.24.0-linux64.tar.gz
+
+######################################################################
+# Node stage to deal with static asset construction
+######################################################################
+FROM node:10-jessie AS superset-node
+
+# NPM ci first, as to NOT invalidate previous steps except for when package.json changes
+RUN mkdir -p /app/superset/assets
+COPY ./superset/assets/package* /app/superset/assets/
+RUN cd /app/superset/assets \
+        && npm ci
+
+# Next, copy in the rest and let webpack do its thing
+COPY ./superset/assets /app/superset/assets
+# This is BY FAR the most expensive step (thanks Terser!)
+RUN cd /app/superset/assets \
+        && npm run build \
+        && rm -rf node_modules
+
 
 ######################################################################
 # Final lean image...
