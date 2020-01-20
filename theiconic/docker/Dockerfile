@@ -103,6 +103,7 @@ RUN useradd --user-group --no-create-home --no-log-init --shell /bin/bash supers
             build-essential \
             default-libmysqlclient-dev \
             libpq-dev \
+            gettext \
         && rm -rf /var/lib/apt/lists/*
 
 COPY --from=gecko /usr/local/bin/geckodriver /usr/local/bin/
