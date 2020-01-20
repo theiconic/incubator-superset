@@ -13,7 +13,6 @@ export DOCKER_BUILDKIT=1 \
 
 # Build nginx-redirect image
 APP_NGINX_IMAGE=$(cicd::get_docker_image "${APP_NAME}" "-nginx")
-echo ${APP_NGINX_IMAGE}
 echo docker build -t ${APP_NGINX_IMAGE} \
     -f "${DEFAULT_DOCKERFILES_PATH}/Dockerfile-nginx-redirect" \
     ${CONTEXT_PATH}
@@ -21,7 +20,7 @@ echo docker build -t ${APP_NGINX_IMAGE} \
 # Build superset image
 APP_IMAGE=$(cicd::get_docker_image "${APP_NAME}")
 docker build -t ${APP_IMAGE} \
-    -f "${cicd_working_directory}/theiconic/docker/Dockerfile" \
+    -f "${DEFAULT_DOCKERFILES_PATH}/Dockerfile" \
     ${CONTEXT_PATH}
 
 docker push ${APP_IMAGE}
