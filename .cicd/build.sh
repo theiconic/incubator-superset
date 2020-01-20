@@ -13,7 +13,8 @@ export DOCKER_BUILDKIT=1 \
 
 # Build nginx-redirect image
 APP_NGINX_IMAGE=$(cicd::get_docker_image "${APP_NAME}" "-nginx")
-docker build -t ${APP_NAME_NGINX} \
+echo ${APP_NGINX_IMAGE}
+echo docker build -t ${APP_NGINX_IMAGE} \
     -f "${DEFAULT_DOCKERFILES_PATH}/Dockerfile-nginx-redirect" \
     ${CONTEXT_PATH}
 
