@@ -36,6 +36,7 @@ from selenium.common.exceptions import WebDriverException
 from selenium.webdriver import chrome, firefox
 from werkzeug.http import parse_cookie
 
+import os
 # Superset framework imports
 from superset import app, db, security_manager
 from superset.extensions import celery_app
@@ -46,20 +47,22 @@ from superset.models.schedules import (
     SliceEmailReportFormat,
 )
 from superset.utils.core import get_email_address_list, send_email_smtp
+from cryptography.fernet import Fernet
 
 # Globals
 config = app.config
 logging.getLogger("tasks.email_reports").setLevel(logging.INFO)
 
 # Time in seconds, we will wait for the page to load and render
-PAGE_RENDER_WAIT = 30
+PAGE_RENDER_WAIT = 10
 
 
 EmailContent = namedtuple("EmailContent", ["body", "data", "images"])
 
 
 def _get_recipients(schedule):
-    bcc = config["EMAIL_REPORT_BCC_ADDRESS"]
+    logging.debug("_get_recipients")
+    bcc = config.get("EMAIL_REPORT_BCC_ADDRESS", None)
 
     if schedule.deliver_as_group:
         to = schedule.recipients
@@ -71,6 +74,7 @@ def _get_recipients(schedule):
 
 def _deliver_email(schedule, subject, email):
     for (to, bcc) in _get_recipients(schedule):
+        logging.debug("_deliver_email {}".format(to))
         send_email_smtp(
             to,
             subject,
@@ -85,6 +89,7 @@ def _deliver_email(schedule, subject, email):
 
 
 def _generate_mail_content(schedule, screenshot, name, url):
+    logging.debug("_generate_mail_content")
     if schedule.delivery_type == EmailDeliveryType.attachment:
         images = None
         data = {"screenshot.png": screenshot}
@@ -93,6 +98,8 @@ def _generate_mail_content(schedule, screenshot, name, url):
             name=name,
             url=url,
         )
+
+        logging.debug("_generate_mail_content 1")
     elif schedule.delivery_type == EmailDeliveryType.inline:
         # Get the domain from the 'From' address ..
         # and make a message id without the < > in the ends
@@ -111,24 +118,30 @@ def _generate_mail_content(schedule, screenshot, name, url):
             msgid=msgid,
         )
 
+    logging.debug("_generate_mail_content 2")
     return EmailContent(body, data, images)
 
 
 def _get_auth_cookies():
     # Login with the user specified to get the reports
     with app.test_request_context():
-        user = security_manager.find_user(config["EMAIL_REPORTS_USER"])
+        user = security_manager.find_user(username=os.getenv('SUPERSET_SVC_LOGIN_USER'))
+        logging.debug("user {}".format(user))
         login_user(user)
 
+        logging.debug("_get_auth_cookies 1")
         # A mock response object to get the cookie information from
         response = Response()
         app.session_interface.save_session(app, session, response)
 
     cookies = []
 
+    logging.debug("_get_auth_cookies 2")
     # Set the cookies in the driver
     for name, value in response.headers:
+        logging.debug("_get_auth_cookies 3")
         if name.lower() == "set-cookie":
+            logging.debug("_get_auth_cookies 4")
             cookie = parse_cookie(value)
             cookies.append(cookie["session"])
 
@@ -143,6 +156,11 @@ def _get_url_path(view, **kwargs):
 
 
 def create_webdriver():
+
+    firefoxProfile = firefox.firefox_profile.FirefoxProfile()
+    firefoxProfile.set_preference("general.useragent.override", "SSWORKER_FIREFOX_BROWSER")
+
+    logging.debug("create_webdriver")
     # Create a webdriver for use in fetching reports
     if config["EMAIL_REPORTS_WEBDRIVER"] == "firefox":
         driver_class = firefox.webdriver.WebDriver
@@ -152,31 +170,35 @@ def create_webdriver():
         options = chrome.options.Options()
 
     options.add_argument("--headless")
-
+    logging.debug("create_webdriver 1")
     # Prepare args for the webdriver init
-    kwargs = dict(options=options)
-    kwargs.update(config["WEBDRIVER_CONFIGURATION"])
+    kwargs = dict(options=options, firefox_profile=firefoxProfile)
+    kwargs.update(config.get("WEBDRIVER_CONFIGURATION"))
 
     # Initialize the driver
     driver = driver_class(**kwargs)
+    logging.debug("create_webdriver 2")
 
-    # Some webdrivers need an initial hit to the welcome URL
-    # before we set the cookie
-    welcome_url = _get_url_path("Superset.welcome")
-
-    # Hit the welcome URL and check if we were asked to login
-    driver.get(welcome_url)
-    elements = driver.find_elements_by_id("loginbox")
-
-    # This indicates that we were not prompted for a login box.
-    if not elements:
-        return driver
+    #Login request with credentials
+    secret_key = os.getenv('SUPERSET_SVC_LOGIN_ENCRYPTION_SECRET')
+    fernet = Fernet(secret_key)
+    svcuser = fernet.encrypt((os.getenv('SUPERSET_SVC_LOGIN_USER')).encode()).decode()
+    svcauthkey = fernet.encrypt((os.getenv('SUPERSET_SVC_LOGIN_AUTH_KEY')).encode()).decode()
+    baseurl = config.get('WEBDRIVER_BASEURL')
+    # Create login url & call it
+    login_url = "{baseurl}/login?svcuser={svcuser}&svcauthkey={svcauthkey}" \
+        .format(baseurl=baseurl,
+                svcuser=svcuser,
+                svcauthkey=svcauthkey)
+    driver.get(login_url)
+    time.sleep(PAGE_RENDER_WAIT)
 
     # Set the cookies in the driver
     for cookie in _get_auth_cookies():
+        logging.debug("create_webdriver 5")
         info = dict(name="session", value=cookie)
         driver.add_cookie(info)
-
+    logging.debug("create_webdriver 6")
     return driver
 
 
@@ -202,9 +224,10 @@ def deliver_dashboard(schedule):
     Given a schedule, delivery the dashboard as an email report
     """
     dashboard = schedule.dashboard
-
+    logging.debug("deliver_dashboard")
     dashboard_url = _get_url_path("Superset.dashboard", dashboard_id=dashboard.id)
 
+    logging.debug("deliver_dashboard {}".format(dashboard_url))
     # Create a driver, fetch the page, wait for the page to render
     driver = create_webdriver()
     window = config["WEBDRIVER_WINDOW"]["dashboard"]
@@ -212,33 +235,43 @@ def deliver_dashboard(schedule):
     driver.get(dashboard_url)
     time.sleep(PAGE_RENDER_WAIT)
 
+    logging.debug("deliver_dashboard 0 page_source {}".format(driver.page_source))
+    logging.debug("deliver_dashboard 1")
+
+    logging.debug("deliver_dashboard wait is over")
+
     # Set up a function to retry once for the element.
     # This is buggy in certain selenium versions with firefox driver
     get_element = getattr(driver, "find_element_by_class_name")
     element = retry_call(
         get_element, fargs=["grid-container"], tries=2, delay=PAGE_RENDER_WAIT
     )
-
+    logging.debug("deliver_dashboard 2")
     try:
+        logging.debug("deliver_dashboard 3")
         screenshot = element.screenshot_as_png
+        logging.debug("deliver_dashboard 4")
     except WebDriverException:
+        logging.debug("deliver_dashboard 5")
         # Some webdrivers do not support screenshots for elements.
         # In such cases, take a screenshot of the entire page.
         screenshot = driver.screenshot()  # pylint: disable=no-member
+        logging.debug("deliver_dashboard 6")
     finally:
+        logging.debug("deliver_dashboard 7")
         destroy_webdriver(driver)
 
     # Generate the email body and attachments
     email = _generate_mail_content(
         schedule, screenshot, dashboard.dashboard_title, dashboard_url
     )
-
+    logging.debug("deliver_dashboard 8")
     subject = __(
         "%(prefix)s %(title)s",
         prefix=config["EMAIL_REPORTS_SUBJECT_PREFIX"],
         title=dashboard.dashboard_title,
     )
-
+    logging.debug("deliver_dashboard 9")
     _deliver_email(schedule, subject, email)
 
 
@@ -263,8 +296,8 @@ def _get_slice_data(schedule):
         raise URLError(response.getcode())
 
     # TODO: Move to the csv module
-    content = response.read()
-    rows = [r.split(b",") for r in content.splitlines()]
+    lines = response.fp.read()
+    rows = [r.split(b",") for r in lines.splitlines()]
 
     if schedule.delivery_type == EmailDeliveryType.inline:
         data = None
@@ -281,9 +314,9 @@ def _get_slice_data(schedule):
             )
 
     elif schedule.delivery_type == EmailDeliveryType.attachment:
-        data = {__("%(name)s.csv", name=slc.slice_name): content}
+        data = {__("%(name)s.csv", name=slc.slice_name): lines}
         body = __(
-            '<b><a href="%(url)s">Explore in Superset</a></b><p></p>',
+            '<b><a href="%(url)s">%(name)s</a></b><p></p>',
             name=slc.slice_name,
             url=url,
         )
@@ -292,17 +325,24 @@ def _get_slice_data(schedule):
 
 
 def _get_slice_visualization(schedule):
+
+    logging.debug("_get_slice_visualization")
     slc = schedule.slice
 
     # Create a driver, fetch the page, wait for the page to render
     driver = create_webdriver()
     window = config["WEBDRIVER_WINDOW"]["slice"]
     driver.set_window_size(*window)
-
+    logging.debug("_get_slice_visualization 1")
     slice_url = _get_url_path("Superset.slice", slice_id=slc.id)
 
     driver.get(slice_url)
     time.sleep(PAGE_RENDER_WAIT)
+    logging.debug("_get_slice_visualization 2")
+
+    time.sleep(PAGE_RENDER_WAIT)
+    logging.debug("_get_slice_visualization wait is over")
+
 
     # Set up a function to retry once for the element.
     # This is buggy in certain selenium versions with firefox driver
@@ -312,16 +352,18 @@ def _get_slice_visualization(schedule):
         tries=2,
         delay=PAGE_RENDER_WAIT,
     )
-
+    logging.debug("_get_slice_visualization 4")
     try:
         screenshot = element.screenshot_as_png
     except WebDriverException:
+        logging.debug("_get_slice_visualization 5")
         # Some webdrivers do not support screenshots for elements.
         # In such cases, take a screenshot of the entire page.
         screenshot = driver.screenshot()  # pylint: disable=no-member
     finally:
+        logging.debug("_get_slice_visualization 6")
         destroy_webdriver(driver)
-
+    logging.debug("_get_slice_visualization 7")
     # Generate the email body and attachments
     return _generate_mail_content(schedule, screenshot, slc.slice_name, slice_url)
 
@@ -330,19 +372,22 @@ def deliver_slice(schedule):
     """
     Given a schedule, delivery the slice as an email report
     """
+    logging.debug("deliver_slice")
     if schedule.email_format == SliceEmailReportFormat.data:
+        logging.debug("deliver_slice 1")
         email = _get_slice_data(schedule)
     elif schedule.email_format == SliceEmailReportFormat.visualization:
+        logging.debug("deliver_slice 2")
         email = _get_slice_visualization(schedule)
     else:
         raise RuntimeError("Unknown email report format")
-
+    logging.debug("deliver_slice 3")
     subject = __(
         "%(prefix)s %(title)s",
         prefix=config["EMAIL_REPORTS_SUBJECT_PREFIX"],
         title=schedule.slice.slice_name,
     )
-
+    logging.debug("deliver_slice 4")
     _deliver_email(schedule, subject, email)
 
 
@@ -357,6 +402,7 @@ def schedule_email_report(
     model_cls = get_scheduler_model(report_type)
     schedule = db.create_scoped_session().query(model_cls).get(schedule_id)
 
+    logging.debug("schedule_email_report")
     # The user may have disabled the schedule. If so, ignore this
     if not schedule or not schedule.active:
         logging.info("Ignoring deactivated schedule")
@@ -367,9 +413,12 @@ def schedule_email_report(
         schedule.id = schedule_id
         schedule.recipients = recipients
 
+    logging.debug("schedule_email_report 1")
     if report_type == ScheduleType.dashboard.value:
+        logging.debug("schedule_email_report 2")
         deliver_dashboard(schedule)
     elif report_type == ScheduleType.slice.value:
+        logging.debug("schedule_email_report 3")
         deliver_slice(schedule)
     else:
         raise RuntimeError("Unknown report type")

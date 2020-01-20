@@ -92,7 +92,7 @@ def etag_cache(max_age, check_perms=bool):
                 response.last_modified = datetime.utcnow()
                 expiration = max_age if max_age != 0 else FAR_FUTURE
                 response.expires = response.last_modified + timedelta(
-                    seconds=expiration
+                    seconds=int(expiration)
                 )
                 response.add_etag()
 
