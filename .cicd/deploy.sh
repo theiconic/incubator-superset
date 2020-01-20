@@ -23,7 +23,7 @@ if [[ "${CICD_NAMESPACE}" == 'live' ]]; then
     REDIS_INSTANCE_SIZE="cache.m3.large"
 fi
 
-export SUPERSET_DB_HOST="mysql.${SERVICE_HOST}"
+export SUPERSET_DB_HOST="${APP_NAME}-${CICD_NAMESPACE}.mysql.${SERVICE_HOST}"
 
 # Prepare the scaling values
 export APPLICATION_MIN_REPLICAS=6
