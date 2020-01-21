@@ -3,39 +3,13 @@ import './ReportGeneratorUI.css';
 import { clearChildren, openUrlInNewTab } from './Util';
 
 const propTypes = {
-  // Each object is { field1: value1, field2: value2 }
-  data: PropTypes.arrayOf(PropTypes.object),
-  height: PropTypes.number,
-  alignPositiveNegative: PropTypes.bool,
-  colorPositiveNegative: PropTypes.bool,
+  url: PropTypes.string,
+  records: PropTypes.arrayOf(PropTypes.object),
   columns: PropTypes.arrayOf(PropTypes.shape({
     key: PropTypes.string,
     label: PropTypes.string,
     format: PropTypes.string,
   })),
-  filters: PropTypes.object,
-  includeSearch: PropTypes.bool,
-  metrics: PropTypes.arrayOf(PropTypes.oneOfType([
-    PropTypes.string,
-    PropTypes.object,
-  ])),
-  onAddFilter: PropTypes.func,
-  onRemoveFilter: PropTypes.func,
-  orderDesc: PropTypes.bool,
-  pageLength: PropTypes.oneOfType([
-    PropTypes.number,
-    PropTypes.string,
-  ]),
-  percentMetrics: PropTypes.arrayOf(PropTypes.oneOfType([
-    PropTypes.string,
-    PropTypes.object,
-  ])),
-  tableFilter: PropTypes.bool,
-  tableTimestampFormat: PropTypes.string,
-  timeseriesLimitMetric: PropTypes.oneOfType([
-    PropTypes.string,
-    PropTypes.object,
-  ]),
 };
 
 async function ReportGeneratorUIVis(element, props) {
