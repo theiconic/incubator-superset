@@ -18,6 +18,8 @@ exec gunicorn --bind  0.0.0.0:8088 \
         --log-level $SUPERSET_GUNICORN_LOG_LEVEL \
         --workers $SUPERSET_NO_OF_WORKERS \
         --timeout $SUPERSET_GUNICORN_TIMEOUT \
+        --threads 20 \
+        --timeout 60 \
         --limit-request-line 0 \
         --limit-request-field_size 0 \
-        superset
+        "${FLASK_APP}"
