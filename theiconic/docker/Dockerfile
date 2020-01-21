@@ -135,7 +135,7 @@ RUN ln -sf /usr/local/bin/${TARGET_ENV}/* /usr/local/bin/
 
 COPY ./theiconic/superset/ ./app/superset/
 RUN ln -sf /app/superset/superset_config_${TARGET_ENV}.py /app/superset/superset_config.py
-RUN cd /app && chown -R superset:superset *
+RUN chown -R superset:superset /app
 
 WORKDIR /app
 USER superset
