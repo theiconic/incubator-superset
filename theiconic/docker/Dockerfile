@@ -128,14 +128,19 @@ COPY ./docker/docker-entrypoint.sh /usr/bin/
 # Overwrite superset binaries with TheIconic versions
 ####################################################################
 ARG TARGET_ENV=live
-COPY ./theiconic/superset/bin/ /usr/local/bin/
-RUN ln -sf /usr/local/bin/${TARGET_ENV}/* /usr/local/bin/
+COPY ./theiconic/superset/bin/ /usr/bin/
+#RUN chown -R superset:superset /usr/bin/${TARGET_ENV}
+RUN chmod +x /usr/bin/${TARGET_ENV}/*
+RUN chmod +x /usr/bin/start_*.sh
+RUN ln -sf /usr/bin/${TARGET_ENV}/* /usr/bin/
+
 
 COPY ./theiconic/superset/ ./app/superset/
+RUN ln -sf /app/superset/superset_config_${TARGET_ENV}.py /app/superset/superset_config.py
+RUN cd /app && chown -R superset:superset *
 
 WORKDIR /app
-
-USER root
+USER superset
 
 HEALTHCHECK CMD ["curl", "-f", "http://localhost:8088/health"]
 
@@ -153,4 +158,4 @@ COPY ./requirements-dev.txt ./docker/requirements-extra.txt /app/
 USER root
 RUN cd /app \
     && pip install --no-cache -r requirements-dev.txt -r requirements-extra.txt
-#USER superset
+USER superset

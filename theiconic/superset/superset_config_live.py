@@ -65,7 +65,7 @@ ENABLE_PROXY_FIX = True
 # AUTH_REMOTE_USER : Is for using REMOTE_USER from web server
 
 AUTH_TYPE = AUTH_OID
-OIDC_CLIENT_SECRETS = 'data_okta.json'
+OIDC_CLIENT_SECRETS = '/app/superset/data_okta.json'
 OIDC_ID_TOKEN_COOKIE_SECURE = True
 OIDC_SCOPES = ["openid", "email", "profile"]
 OIDC_REQUIRE_VERIFIED_EMAIL = False
