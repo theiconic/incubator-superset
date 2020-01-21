@@ -2,9 +2,6 @@ import PropTypes from 'prop-types';
 import './ReportGeneratorUI.css';
 import { clearChildren, openUrlInNewTab } from './Util';
 
-const REPORT_SERVICE_BASE_URL = 'https://report-generator.live.ambo.eks.aws.theiconic.com.au/';
-const REPORT_SERVICE_GENERATE_PATH = 'generate-report/best-sellers/v1/';
-
 const propTypes = {
   // Each object is { field1: value1, field2: value2 }
   data: PropTypes.arrayOf(PropTypes.object),
@@ -44,8 +41,9 @@ const propTypes = {
 async function ReportGeneratorUIVis(element, props) {
   console.log(props);
   const {
-    data,
-    // columns,
+    records,
+    columns,
+    url,
   } = props;
   clearChildren(element);
   const generateReportEl = document.createElement('button');
@@ -53,10 +51,10 @@ async function ReportGeneratorUIVis(element, props) {
   generateReportEl.addEventListener('click', async () => {
     const payload = {
       query: '',
-      rowcount: data.length,
+      rowcount: records.length,
       status: 'success',
       data: {
-        records: data,
+        records,
         columns: [],
       },
     };
@@ -71,7 +69,7 @@ async function ReportGeneratorUIVis(element, props) {
     };
 
     const response = await fetch(
-      `${REPORT_SERVICE_BASE_URL}${REPORT_SERVICE_GENERATE_PATH}`,
+      url,
       fetchOptions,
     );
     const responseContent = await response.json();
