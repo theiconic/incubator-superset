@@ -18,7 +18,7 @@ spec:
       containers:
       - name: ${APP_NAME}
         image: ${APP_IMAGE}
-        command: ["sh", "start_webserver.sh"]
+        command: ["sh", "/usr/local/bin/start_webserver.sh"]
         envFrom:
           - configMapRef:
               name: ${APP_NAME}-environment
@@ -66,7 +66,7 @@ spec:
       containers:
       - name: ${APP_NAME}-monitoring
         image: ${APP_IMAGE}
-        command: ["sh", "start_monitoring.sh"]
+        command: ["sh", "/usr/local/bin/start_monitoring.sh"]
         envFrom:
           - configMapRef:
               name: ${APP_NAME}-environment
@@ -102,7 +102,7 @@ spec:
       containers:
       - name: ${APP_NAME}-worker
         image: ${APP_IMAGE}
-        command: ["sh", "start_worker.sh"]
+        command: ["sh", "/usr/local/bin/start_worker.sh"]
         envFrom:
           - configMapRef:
               name: ${APP_NAME}-environment
@@ -135,7 +135,7 @@ spec:
       containers:
       - name: ${APP_NAME}-scheduler
         image: ${APP_IMAGE}
-        command: ["sh", "start_scheduler.sh"]
+        command: ["sh", "/usr/local/bin/start_scheduler.sh"]
         envFrom:
           - configMapRef:
               name: ${APP_NAME}-environment
