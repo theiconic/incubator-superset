@@ -5,20 +5,11 @@ import { clearChildren, openUrlInNewTab } from './Util';
 const propTypes = {
   url: PropTypes.string,
   records: PropTypes.arrayOf(PropTypes.object),
-  columns: PropTypes.arrayOf(PropTypes.shape({
-    key: PropTypes.string,
-    label: PropTypes.string,
-    format: PropTypes.string,
-  })),
 };
 
 async function ReportGeneratorUIVis(element, props) {
   console.log(props);
-  const {
-    records,
-    columns,
-    url,
-  } = props;
+  const { records, url } = props;
   clearChildren(element);
   const generateReportEl = document.createElement('button');
   generateReportEl.innerText = 'Generate Report';
